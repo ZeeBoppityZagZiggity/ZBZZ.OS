@@ -1,0 +1,5 @@
+objs/*
+*.elf
+*.img
+*.bin
+*.o
