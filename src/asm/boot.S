@@ -10,7 +10,7 @@ _start:
 	# Tell any Hardware threads not helping bootstrap
 	# to kindly wait.
 	csrr  t0, mhartid
-	bnez  t0, park
+	bnez  t0, infloop #send nonzero hartid's to infloop?
 
 	#Load the global pointer
 	.option norelax
@@ -21,17 +21,19 @@ _start:
 	la t1, _ebss
 	bgeu	t0, t1, contpoint
 
-contpoint:	#Clear out BSS
-	bge		t0,t1,park
+clearbss:	#Clear out BSS
+#	bge		t0,t1,park
 	sd		zero,(t0)
 	addi	t0,t0,8
-park:	
+	blt     t0,t1,clearbss
+contpoint:	
 	la		sp, _sp0 #Load Stack Pointer
 	la		a0, kinit
 	li		t0, 0x1800
 	csrw	mstatus,t0	#Setting privilege level to 3 (machine)
 	csrw	mepc, a0
-#	la		ra, infloop
+
+	la		ra, infloop
 	mret
 
 infloop:
