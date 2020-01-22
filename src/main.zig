@@ -1,3 +1,3 @@
-pub fn zentry() void {
-  var x = 0;
+export fn kinit() void {
+  const x = 0;
 }

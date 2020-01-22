@@ -31,7 +31,7 @@ park:
 	li		t0, 0x1800
 	csrw	mstatus,t0	#Setting privilege level to 3 (machine)
 	csrw	mepc, a0
-	la		ra, 1f
+#	la		ra, infloop
 	mret
 
 infloop:
