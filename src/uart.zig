@@ -8,9 +8,9 @@ pub extern fn uart_init(base_addr: usize) void {
     //Enable FIFO
     const fifo_ptr = @intToPtr(*volatile u8, base_addr + 2);
     fifo_ptr.* = 0b1;
-    //Enable receiver buffer interrupts  
-    const intr_ptr = @intToPtr(*volatile u8, base_addr + 1); 
-    intr_ptr.* = 0b1; 
+    // //Enable receiver buffer interrupts  
+    // const intr_ptr = @intToPtr(*volatile u8, base_addr + 1); 
+    // intr_ptr.* = 0b1; 
 
     // var divisor: u16 = 592; 
     // var divisor_least: u8 = divisor & 0xff; 
