@@ -3,3 +3,4 @@ objs/*
 *.img
 *.bin
 *.o
+.DS_Store
