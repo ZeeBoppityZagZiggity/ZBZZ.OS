@@ -1,4 +1,4 @@
-const uart = @import("uart.zig");
+const uart_lib = @import("uart.zig").UART;
 const UART_BASE_ADDR: usize = 0x10000000;
 
 // export const uart_base_addr = 0x10000000;
@@ -6,12 +6,12 @@ const UART_BASE_ADDR: usize = 0x10000000;
 export fn kinit() void {
   const x = 0;
   
-  uart.uart_init(UART_BASE_ADDR);
+  const uart = uart_lib.init(UART_BASE_ADDR);
   var rx: ?u8 = null; 
   while(true) {
-    rx = uart.uart_read(UART_BASE_ADDR);
+    rx = uart.read();
     if (rx != null) {
-        uart.uart_put(UART_BASE_ADDR, rx.?); 
+        uart.put(rx.?); 
     }
   } //stay in zig for now
 }
