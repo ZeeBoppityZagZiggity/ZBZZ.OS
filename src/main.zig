@@ -1,12 +1,10 @@
 const uart_lib = @import("uart.zig").UART;
-const UART_BASE_ADDR: usize = 0x10000000;
-
-// export const uart_base_addr = 0x10000000;
+const uart_base_addr: usize = 0x10000000;
 
 export fn kinit() void {
   const x = 0;
   
-  const uart = uart_lib.init(UART_BASE_ADDR);
+  const uart = uart_lib.MakeUART(uart_base_addr);
   var rx: ?u8 = null; 
   while(true) {
     rx = uart.read();
