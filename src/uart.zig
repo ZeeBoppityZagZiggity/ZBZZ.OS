@@ -28,6 +28,15 @@ pub const UART = struct {
         const base_ptr = @intToPtr(*volatile u8, self.uart_base_addr);
         base_ptr.* = din; 
     }
+    
+    /// puts
+    /// @brief writes an array of u8 data through the UART
+    /// @param din unsigned byte array of input to write
+    pub fn puts(self: UART, din: []const u8) void {
+        for (din) |value| {
+            self.put(value);
+        }
+    }
 
     /// read
     /// @brief returns content written to the UART or a null value

@@ -5,6 +5,7 @@ export fn kinit() void {
   const x = 0;
   
   const uart = uart_lib.MakeUART(uart_base_addr);
+  uart.puts("Uart Initd\n");
   var rx: ?u8 = null; 
   while(true) {
     rx = uart.read();
