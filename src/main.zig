@@ -1,17 +1,16 @@
-const uart = @import("uart.zig");
-const UART_BASE_ADDR: usize = 0x10000000;
-
-// export const uart_base_addr = 0x10000000;
+const uart_lib = @import("uart.zig").UART;
+const uart_base_addr: usize = 0x10000000;
 
 export fn kinit() void {
   const x = 0;
   
-  uart.uart_init(UART_BASE_ADDR);
+  const uart = uart_lib.MakeUART(uart_base_addr);
+  uart.puts("Uart Initd\n");
   var rx: ?u8 = null; 
   while(true) {
-    rx = uart.uart_read(UART_BASE_ADDR);
+    rx = uart.read();
     if (rx != null) {
-        uart.uart_put(UART_BASE_ADDR, rx.?); 
+        uart.put(rx.?); 
     }
   } //stay in zig for now
 }
