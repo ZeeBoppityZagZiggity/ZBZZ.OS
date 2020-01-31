@@ -44,6 +44,24 @@ contpoint:
 	mret
 
 post_init:
+	#setting to supervisor mode 
+	# li 		t0, (0b01 << 11) | (1 << 7) | (1 << 5) 
+	# csrw 	mstatus, t0 
+	# # Setting m_trap_vector 
+	# la 		t2, m_trap_vector 
+	# csrw 	mtvec, t2 
+
+	# # Setting stvec 
+	# la 		t3, m_trap_vector 
+	# csrw 	stvec, t3 
+
+	# la 		t1, kmain 
+	# csrw 	mepc, t1 
+
+	# li 		t4, 0xaaa 
+	# csrw 	mie, t2 
+	# mret
+
 	li 		t0, 0x1880
 	# li 		t0, (0b01 << 11) | (1 << 7) 
 	csrw 	mstatus, t0 
