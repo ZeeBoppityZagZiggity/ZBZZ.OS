@@ -48,11 +48,10 @@ asm_trap_vector:
   csrr	a3, mhartid
   csrr	a4, mstatus
   mv		a5, t5
-  ld		sp, 520(a5)
+  #ld		sp, 520(a5)
   call	ktrap
 
   csrw	mepc, a0
-
   csrr	t6, mscratch
 
   .set	i, 1

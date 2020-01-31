@@ -31,12 +31,20 @@ contpoint:
 	li		t0, 0x1800
 	csrw	mstatus,t0	#Setting privilege level to 3 (machine)
 	csrw	mepc, a0
-	la t2, asm_trap_vector 
-	csrw mtvec, t2 
-	li t3, (1 << 3) | (1 << 7) | (1 << 11) 
-	csrw mie, t3 
 	
-	la		ra, infloop
+	la		ra, tokmain
+	mret
+
+tokmain:
+	li 		t0, 0x1880
+	csrw 	mstatus, t0 
+	la  	t2, asm_trap_vector 
+	csrw	mtvec, t2 
+
+	la 		t1, kmain 
+	csrw 	mepc, t1 
+	li 		t3, 0x888 #(1 << 3) | (1 << 7) | (1 << 11) 
+	csrw 	mie, t3 
 	mret
 
 infloop:
