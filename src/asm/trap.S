@@ -5,6 +5,8 @@
 .set REG_SIZE, 8 
 .set MAX_CPUS, 8 
 
+# I would like to thank Dr. Marz and his blog (Did you know he has a blog?????) 
+# for these neato macros and for how to use them. 
 .macro save_gp i, basereg=t6
 	sd		x\i, ((\i)*REG_SIZE)(\basereg)
 .endm 
@@ -46,12 +48,14 @@ m_trap_vector:
 	csrr 	a3, mhartid 
 	csrr 	a4, mstatus 
 	mv 		a5, t5 
+	# load trap stack pointer
 	# ld 		sp, 520(a5) 
+	# Go into zig trap handler
 	call m_trap 
 
 	# Zig trap handler will put return address to go to in a0. 
-
 	csrw 	mepc, a0 
+
 	csrr 	t6, mscratch 
 
 	# Restore GP registers

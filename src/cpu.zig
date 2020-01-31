@@ -1,6 +1,9 @@
-pub fn mscratch_write(x: usize) void {
-    asm volatile ("csrw mscratch, %[x]"
+/// mscratch_write
+/// @brief Writes a value of type usize into the mscratch register
+/// @param val Value to write into mscratch
+pub fn mscratch_write(val: usize) void {
+    asm volatile ("csrw mscratch, %[val]"
         :
-        : [x] "{x10}" (x)
+        : [val] "{x10}" (val)
     );
 }

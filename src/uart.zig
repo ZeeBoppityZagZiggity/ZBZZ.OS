@@ -2,6 +2,8 @@ const base_addr: usize = 0x10000000;
 const freq = 10000000;
 const baud = 115200;
 
+//true when uart has first been initialized. Reinitializing the uart
+//and its fifos, baud rate, etc every time we need to use it seems wasteful.
 var initd = false;
 
 /// UART Struct

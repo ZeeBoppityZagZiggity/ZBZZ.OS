@@ -4,7 +4,9 @@ const uart_lib = @import("uart.zig").UART;
 export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: usize, frame: usize) usize {
     const uart = uart_lib.MakeUART();
     uart.puts("Trap has been triggered!\n");
+    //Check if it is an interrupt or not
     var is_async: bool = (((mcause >> 63) & 0b1) == 1);
+    //Exception code
     var cause_num = mcause & 0xfff;
     if (is_async) {
         uart.puts("Interrupt!\n");
@@ -19,17 +21,20 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
         }
     }
 
+    //For now just return to the next instruction
     return epc + 4;
 }
 
 pub fn emptyfunc() void {}
 
+/// TrapFrame
+/// @brief trap frame for storing context during trap handling
 pub const TrapFrame = struct {
-    regs: [32]usize,
-    fregs: [32]usize,
-    satp: usize,
-    trap_stack: usize,
-    hartid: usize,
+    regs: [32]usize, //registers
+    fregs: [32]usize, //fregisters
+    satp: usize, //SATP ?
+    trap_stack: usize, //pointer to stack for trap handling
+    hartid: usize, //hartid
 
     pub fn makeTrapFrame() TrapFrame {
         return TrapFrame{
@@ -42,4 +47,5 @@ pub const TrapFrame = struct {
     }
 };
 
-pub const KERNEL_TRAP_FRAME = TrapFrame.makeTrapFrame();
+// Declaration of Trap Frame
+pub var KERNEL_TRAP_FRAME = TrapFrame.makeTrapFrame();
