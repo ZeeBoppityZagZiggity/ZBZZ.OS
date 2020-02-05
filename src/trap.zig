@@ -9,6 +9,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
     var is_async: bool = (((mcause >> 63) & 0b1) == 1);
     //Exception code
     var cause_num = mcause & 0xfff;
+    var mepc = epc + 4;
     if (is_async) {
         // uart.puts("Interrupt!\n");
         switch (cause_num) {
@@ -25,13 +26,13 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                     10 => { //UART 
                         var rx: ?u8 = uart.read();
                         switch(rx.?) {
-                            8 => {
+                            8, 127 => {
                                 uart.put(8);
                                 uart.put(' ');
                                 uart.put(8);
                             }, 
-                            10 | 13 => {
-                                uart.puts("\n");
+                            10, 13 => {
+                                uart.puts("\r\n");
                             }, 
                             else => {
                                 uart.put(rx.?);
@@ -43,6 +44,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                     }
                 }
                 plic.complete(claim_id); 
+                mepc = epc;
             },
             else => {
                 uart.puts("Non-external interrupt\n");
@@ -68,7 +70,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             },
             5 => {
                 uart.puts("Load Access Fault\n");
-                // asm volatile("j .");
+                asm volatile("j .");
             },
             6 => {
                 uart.puts("Store/AMO address misaligned\n");
@@ -97,7 +99,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
     }
 
     //For now just return to the next instruction
-    return epc + 4;
+    return mepc;
 }
 
 pub fn emptyfunc() void {}

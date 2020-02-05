@@ -31,10 +31,10 @@ export fn kmain() void {
     //ecall to test trapping
     // asm volatile ("ecall");
     var rx: ?u8 = null;
-    while (true) {
-        // rx = uart.read();
-        // if (rx != null) {
-        //     uart.put(rx.?);
-        // }
-    } //stay in zig for now
+    // while (true) {
+    //     // rx = uart.read();
+    //     // if (rx != null) {
+    //     //     uart.put(rx.?);
+    //     // }
+    // } //stay in zig for now
 }
