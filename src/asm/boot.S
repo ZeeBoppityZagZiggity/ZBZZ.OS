@@ -44,15 +44,17 @@ contpoint:
 	mret
 # Go here after kinit to enable interrupts and go to kmain
 post_init:
-	li 		t0, 0x1880
+	li 		t0, 0x08a0
 	csrw 	mstatus, t0 
 	la  	t2, m_trap_vector 
 	csrw	mtvec, t2 
 
 	la 		t1, kmain 
 	csrw 	mepc, t1 
-	li 		t3, 0x888
-	csrw 	mie, t2 
+	# li 		t3, 0x888
+	li 		t3, 0xaaa
+	csrw 	mie, t3
+	la 		ra, infloop 
 	mret
 
 

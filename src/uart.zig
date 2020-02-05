@@ -29,7 +29,7 @@ pub const UART = struct {
 
             // //Enable receiver buffer interrupts
             const intr_ptr = @intToPtr(*volatile u8, base_addr + 1);
-            // intr_ptr.* = 0b1;
+            intr_ptr.* = 0b1;
 
             // var divisor: u16 = freq / (baud * 16);
             var divisor: u16 = @intCast(u16, @divFloor(freq, (baud * 16)));

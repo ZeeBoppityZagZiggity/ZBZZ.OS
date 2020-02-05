@@ -1,6 +1,8 @@
 const uart_lib = @import("uart.zig").UART;
 const trap = @import("trap.zig");
 const cpu = @import("cpu.zig");
+const plic = @import("plic.zig");
+const fmt = @import("std").fmt;
 // const uart_base_addr: usize = 0x10000000;
 
 export fn kinit() void {
@@ -9,6 +11,11 @@ export fn kinit() void {
     // uart.uart_init();
     const uart = uart_lib.MakeUART();
     uart.puts("Uart Initd\n");
+
+    // Set up the PLIC 
+    plic.enable(10);
+    plic.set_priority(10, 1); 
+    plic.set_threshold(0);
 
     //Create Trap Frame Pointer
     const tf = @ptrCast(*const u8, &trap.KERNEL_TRAP_FRAME);
@@ -22,12 +29,12 @@ export fn kmain() void {
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
     //ecall to test trapping
-    asm volatile ("ecall");
+    // asm volatile ("ecall");
     var rx: ?u8 = null;
     while (true) {
-        rx = uart.read();
-        if (rx != null) {
-            uart.put(rx.?);
-        }
+        // rx = uart.read();
+        // if (rx != null) {
+        //     uart.put(rx.?);
+        // }
     } //stay in zig for now
 }

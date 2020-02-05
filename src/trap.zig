@@ -1,19 +1,94 @@
 const uart_lib = @import("uart.zig").UART;
+const plic = @import("plic.zig");
 // const uart_base_addr: usize = 0x10000000;
 
 export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: usize, frame: usize) usize {
     const uart = uart_lib.MakeUART();
-    uart.puts("Trap has been triggered!\n");
+    // uart.puts("Trap has been triggered!\n");
     //Check if it is an interrupt or not
     var is_async: bool = (((mcause >> 63) & 0b1) == 1);
     //Exception code
     var cause_num = mcause & 0xfff;
     if (is_async) {
-        uart.puts("Interrupt!\n");
+        // uart.puts("Interrupt!\n");
+        switch (cause_num) {
+            0 => {//User software interrupt 
+                uart.puts("User software interrupt\n");
+            },
+            1 => {
+                uart.puts("Supervisor Software Intterupt\n");
+            },
+            11 => { //Machine External Interrupt
+                // Get id from PLIC
+                const claim_id: u32 = plic.claim();
+                switch (claim_id) {
+                    10 => { //UART 
+                        var rx: ?u8 = uart.read();
+                        switch(rx.?) {
+                            8 => {
+                                uart.put(8);
+                                uart.put(' ');
+                                uart.put(8);
+                            }, 
+                            10 | 13 => {
+                                uart.puts("\n");
+                            }, 
+                            else => {
+                                uart.put(rx.?);
+                            }
+                        }
+                    },
+                    else => {
+
+                    }
+                }
+                plic.complete(claim_id); 
+            },
+            else => {
+                uart.puts("Non-external interrupt\n");
+            }
+        }
+
     } else {
         switch (cause_num) {
+            0 => {
+                uart.puts("Instruction address misaligned!\n");
+            },
+            1 => {
+                uart.puts("Instruction Access fault\n");
+            },
+            2 => {
+                uart.puts("Illegal Instruction\n");
+            },
+            3 => {
+                uart.puts("Breakpoint\n");
+            },
+            4 => {
+                uart.puts("Load Address Misaligned\n");
+            },
+            5 => {
+                uart.puts("Load Access Fault\n");
+                // asm volatile("j .");
+            },
+            6 => {
+                uart.puts("Store/AMO address misaligned\n");
+            }, 
+            7 => {
+                uart.puts("Store/AMO Access Fault\n");
+                // asm volatile("j .");
+            },
+            8 => {
+                uart.puts("Ecall from U-mode\n");
+            },
+            9 => {
+                uart.puts("Ecall from S-mode\n");
+            },
+            10 => {
+                uart.puts("( ͡° ͜ʖ ͡°)\n");
+            },
             11 => {
                 uart.puts("ecall from m-mode\n");
+                // asm volatile("j .");
             },
             else => {
                 uart.puts("other\n");

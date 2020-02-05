@@ -5,7 +5,7 @@
 .set REG_SIZE, 8 
 .set MAX_CPUS, 8 
 
-# I would like to thank Dr. Marz and his blog (Did you know he has a blog?????) 
+# I would like to thank Dr. Marz and his blog (Did you know he has a blog?) 
 # for these neato macros and for how to use them. 
 .macro save_gp i, basereg=t6
 	sd		x\i, ((\i)*REG_SIZE)(\basereg)
@@ -26,6 +26,7 @@
 m_trap_vector: 
 	# Put t6 in mscratch to store later. 
 	# We need it right now to save the others.
+	
 	csrrw t6, mscratch, t6 
 	# Save the other registers. 
 	.set 	i, 1
