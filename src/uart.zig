@@ -55,9 +55,19 @@ pub const UART = struct {
     /// puts
     /// @brief writes an array of u8 data through the UART
     /// @param din unsigned byte array of input to write
-    pub fn puts(self: UART, din: []const u8) void {
-        for (din) |value| {
-            self.put(value);
+    pub fn puts(self: UART, din: [*:0]const u8) void {
+        // for (din) |value| {
+        //     self.put(value);
+        // }
+        var i: usize = 0;
+        while(true) {
+            var value = din[i];
+            if (value == 0) {
+                break;
+            } else {
+                self.put(value);
+            }
+            i += 1;
         }
     }
 

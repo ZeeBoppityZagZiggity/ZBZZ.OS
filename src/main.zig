@@ -28,6 +28,13 @@ export fn kmain() void {
     //Reinit uart
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
+    var a: u8 = 0x61; 
+    var str: [32:0]u8 = undefined; 
+    cpu.itoa(u8, a, &str); 
+    uart.puts(&str);
+    while(true) {
+
+    }
     //ecall to test trapping
     // asm volatile ("ecall");
     var rx: ?u8 = null;
