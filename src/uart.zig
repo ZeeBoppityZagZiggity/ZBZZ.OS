@@ -6,6 +6,14 @@ const baud = 115200;
 //and its fifos, baud rate, etc every time we need to use it seems wasteful.
 var initd = false;
 
+//Wtf bro, why you being a pain in the ass.
+export fn c_put(din: c_int) c_int {
+    var uart = UART.MakeUART();
+    var new_din: u8 = @intCast(u8,din);
+    uart.put(new_din);
+    return 0;
+}
+
 /// UART Struct
 /// @functions MakeUART put read
 pub const UART = struct {
@@ -55,21 +63,32 @@ pub const UART = struct {
     /// puts
     /// @brief writes an array of u8 data through the UART
     /// @param din unsigned byte array of input to write
-    pub fn puts(self: UART, din: [*:0]const u8) void {
+ //   pub fn puts(self: UART, din: [*:0]const u8) void {
         // for (din) |value| {
         //     self.put(value);
         // }
-        var i: usize = 0;
-        while(true) {
-            var value = din[i];
-            if (value == 0) {
-                break;
-            } else {
-                self.put(value);
-            }
-            i += 1;
-        }
+   //     var i: usize = 0;
+    //    while(true) {
+      //      var value = din[i];
+       //     if (value == 0) {
+        //        break;
+         //   } else {
+          //      self.put(value);
+         //   }
+        //    i += 1;
+       // }
+//    }
+
+    /// puts
+    /// @brief writes an array of u8 data through the UART
+    /// @param din unsigned byte array of input to write
+    pub fn puts(self: UART, din: []const u8) void {
+         for (din) |value| {
+             self.put(value);
+         }
     }
+
+
 
     /// read
     /// @brief returns content written to the UART or a null value

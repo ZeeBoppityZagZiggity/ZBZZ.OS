@@ -7,7 +7,7 @@ LIBS=-lc -lgcc
 CFLAGS=-Wall -O0 -g -T$(LDS) -mabi=lp64d -march=rv64gc
 CFLAGS+=-ffreestanding -nostartfiles -nostdinc -static -mcmodel=medany
 ASM=$(wildcard src/asm/*.S)
-ALL_ZIGS=$(wildcard src/*.zig)
+ALL_ZIGS=$(wildcard src/*.zig) 
 ZIGS=src/main.zig
 ZIG=zig
 ZIG_TARGET=riscv64-freestanding-none

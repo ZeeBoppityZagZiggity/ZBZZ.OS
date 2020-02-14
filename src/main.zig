@@ -2,7 +2,11 @@ const uart_lib = @import("uart.zig").UART;
 const trap = @import("trap.zig");
 const cpu = @import("cpu.zig");
 const plic = @import("plic.zig");
-const fmt = @import("std").fmt;
+const c = @cImport({
+    @cInclude("printf.h");
+    });
+
+//const fmt = @import("std").fmt;
 // const uart_base_addr: usize = 0x10000000;
 
 export fn kinit() void {
@@ -29,9 +33,10 @@ export fn kmain() void {
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
     var a: u8 = 0x61; 
-    var str: [32:0]u8 = undefined; 
-    cpu.itoa(u8, a, &str); 
-    uart.puts(&str);
+   // var str: [32:0]u8 = undefined; 
+   // cpu.itoa(u8, a, &str); 
+   // uart.puts(&str);
+    c.printf("zig is awesome\n");
     while(true) {
 
     }
