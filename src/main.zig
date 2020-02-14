@@ -29,9 +29,9 @@ export fn kmain() void {
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
     var a: u8 = 0x61; 
-    var str: [32:0]u8 = undefined; 
-    cpu.itoa(u8, a, &str); 
-    uart.puts(&str);
+  //  var str: [32:0]u8 = undefined; 
+   // cpu.itoa(u8, a, &str); 
+   // uart.puts(&str);
     while(true) {
 
     }
