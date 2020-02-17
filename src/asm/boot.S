@@ -2,7 +2,9 @@
 # Preston Provins, Grayson Bruner, and Charles Rizzo
 # 1/18/2020
 .option norvc
-.section .data
+# .section .data
+
+.section .data 
 
 .section .text.start
 .global _start
@@ -39,6 +41,9 @@ contpoint:
 	# csrw mtvec, t2 
 	# li t3, (1 << 3) | (1 << 7) | (1 << 11) 
 	# csrw mie, t3 
+	la 	a0, _heap_start 
+	la 	a1, _heap_size
+	call kheap
 	
 	la		ra, post_init
 	mret
@@ -62,3 +67,4 @@ infloop:
   wfi
   j infloop
 mret
+
