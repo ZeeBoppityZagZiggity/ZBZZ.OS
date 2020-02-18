@@ -46,24 +46,27 @@ export fn kmain() void {
     //Reinit uart
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
-    // var a: u8 = 0x61;
-    // const b = page.addr2hex(&a);
-    // uart.puts(b);
-    // var str: [32:0]u8 = undefined;
-    // cpu.itoa(u8, a, &str);
-    // uart.puts(&str);
-    // while (true) {}
-    // page.printPageTable();
-    // uart.puts("\n");
-    // var ptr: *u8 = page.zalloc(10);
-    // page.printPageTable();
-    //ecall to test trapping
-    // asm volatile ("ecall");
-    // var rx: ?u8 = null;
-    // while (true) {
-    //     // rx = uart.read();
-    //     // if (rx != null) {
-    //     //     uart.put(rx.?);
-    //     // }
-    // } //stay in zig for now
+    var ptr = page.zalloc(10);
+    // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
+    page.printPageAllocations();
+    var c = kmem.kmalloc(32 * @sizeOf(u8));
+    c = cpu.strcpy(c, "Hello!\n");
+    kmem.kfree(c);
+    var d = kmem.kzmalloc(32 * @sizeOf(u8));
+    // d = cpu.strcpy(d, "Hello, World!\n");
+    // var cptr = @ptrCast([*]u8, c); //need to cast as this to use [] syntax :/
+    // const tst = "Hello!\n"; //Can't just assign a const string :((((
+    // for (tst) |val, i| {
+    //     cptr[i] = val;
+    // }
+    uart.print(c);
+    uart.print(d);
+    const caddr = cpu.dword2hex(@ptrToInt(c));
+    const daddr = cpu.dword2hex(@ptrToInt(d));
+    uart.puts(caddr);
+    uart.puts("\n");
+    uart.puts(daddr);
+    // uart.print(d);
+
+    while (true) {}
 }

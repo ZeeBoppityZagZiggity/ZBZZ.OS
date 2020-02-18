@@ -71,6 +71,17 @@ pub const UART = struct {
         // }
     }
 
+    pub fn print(self: UART, din: *u8) void {
+        var base = @ptrToInt(din);
+        var i: usize = 0;
+        var ptr = @intToPtr(*u8, base + i);
+        while (ptr.* != 0) {
+            self.put(ptr.*);
+            i += 1;
+            ptr = @intToPtr(*u8, base + i);
+        }
+    }
+
     /// read
     /// @brief returns content written to the UART or a null value
     /// @return a u8 piece of data read off the UART or NULL

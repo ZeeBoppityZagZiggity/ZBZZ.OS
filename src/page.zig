@@ -1,10 +1,12 @@
 const uart_lib = @import("uart.zig").UART;
+const cpu = @import("cpu.zig");
+const assert = @import("std").debug.assert;
 
 pub var HEAP_START: usize = 0;
 pub var HEAP_SIZE: usize = 0;
 // extern "C" const HEAP_START: c_ulong;
 // extern "C" const HEAP_SIZE: c_ulong;
-const PAGE_SIZE: usize = 4096;
+pub const PAGE_SIZE: usize = 4096;
 var ALLOC_START: usize = 0;
 
 pub const PageBits = enum(u8) {
@@ -126,6 +128,20 @@ pub fn zalloc(pages: usize) *u8 {
     return ptr;
 }
 
+pub fn dealloc(ptr: *u8) void {
+    var base_addr = HEAP_START + ((@ptrToInt(ptr) - ALLOC_START) / PAGE_SIZE);
+    var p = @intToPtr(*Page, base_addr);
+    var i: usize = 0;
+    while (p.*.is_taken() and !(p.*.is_last())) {
+        p.*.clear();
+        i += 1;
+        p = @intToPtr(*Page, base_addr + i);
+    }
+
+    assert(p.*.is_last() == true);
+    p.*.clear();
+}
+
 pub fn addr2hex(addr: *u8) [2]u8 {
     var val = addr.*;
     // var hexstr: [2]u8 = {'0', '0'};
@@ -145,6 +161,68 @@ pub fn addr2hex(addr: *u8) [2]u8 {
     return hexstr;
 }
 
+pub fn printPageAllocations() void {
+    const uart = uart_lib.MakeUART();
+    var num_pages = HEAP_SIZE / PAGE_SIZE;
+    var head = @intToPtr(*Page, HEAP_START);
+    var tail = @intToPtr(*Page, HEAP_START + num_pages);
+    var alloc_head = ALLOC_START;
+    var alloc_tail = ALLOC_START + num_pages * PAGE_SIZE;
+    //Zee Bop Ziggity Zag, I'll put the developer of Zig in a bodybag :)
+    uart.puts("PAGE ALLOCATION TABLE: \nMETA: ");
+    uart.puts(cpu.dword2hex(@ptrToInt(head)));
+    uart.puts(" -> ");
+    uart.puts(cpu.dword2hex(@ptrToInt(tail)));
+    uart.puts("\nPHYS: ");
+    uart.puts(cpu.dword2hex(alloc_head));
+    uart.puts(" -> ");
+    uart.puts(cpu.dword2hex(alloc_tail));
+    uart.puts("\n");
+    var num: usize = 0;
+    while (@ptrToInt(head) < @ptrToInt(tail)) {
+        if (head.*.is_taken()) {
+            var start = @ptrToInt(head);
+            var memaddr = ALLOC_START + (start - HEAP_START) * PAGE_SIZE;
+            uart.puts(cpu.dword2hex(memaddr));
+            uart.puts(" => ");
+            while (true) {
+                num += 1;
+                if (head.*.is_last()) {
+                    var end = @ptrToInt(head);
+                    var endmemaddr = ALLOC_START + ((end - HEAP_START) * PAGE_SIZE) + PAGE_SIZE - 1;
+                    uart.puts(cpu.dword2hex(endmemaddr));
+                    uart.puts(": ");
+                    uart.puts(cpu.byte2hex((@truncate(u8, end - start + 1))));
+                    uart.puts("\n");
+                    break;
+                }
+                head = @intToPtr(*Page, @ptrToInt(head) + 1);
+            }
+        }
+        head = @intToPtr(*Page, @ptrToInt(head) + 1);
+    }
+    uart.puts("Free pages: ");
+    uart.puts(cpu.byte2hex(@truncate(u8, num_pages - num)));
+    uart.puts("\n");
+}
+
+pub fn printPageContents(addr: *u8) void {
+    const uart = uart_lib.MakeUART();
+    var base_address = @ptrToInt(addr);
+    var i: usize = 0;
+    while (i < PAGE_SIZE) {
+        var ptr = @intToPtr(*u8, base_address + i);
+        // var flag = &ptr.*.flags;
+        uart.puts(addr2hex(ptr));
+        i += 1;
+        if ((i % 32) == 0) {
+            uart.puts("\n");
+        } else if ((i % 4) == 0) {
+            uart.puts(" ");
+        }
+    }
+}
+
 pub fn printPageTable() void {
     const uart = uart_lib.MakeUART();
     const num_pages = HEAP_SIZE / PAGE_SIZE;
@@ -157,5 +235,8 @@ pub fn printPageTable() void {
         // var p: Page = ptr.*;
         // ptr.*.clear();
         i += 1;
+        if ((i != 0) and (i % 10 == 0)) {
+            uart.puts("\n");
+        }
     }
 }
