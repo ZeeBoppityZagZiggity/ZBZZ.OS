@@ -248,5 +248,6 @@ SECTIONS
 
   /* Heap end is at the end of memory, the memory size can set in kconfig */
   PROVIDE( _heap_end = _ram_end );
+  PROVIDE( _heap_size = _heap_end - _heap_start );
 }
 
