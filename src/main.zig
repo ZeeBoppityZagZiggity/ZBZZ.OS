@@ -51,7 +51,13 @@ export fn kmain() void {
     // while (true) {}
     // page.printPageTable();
     // uart.puts("\n");
-    // var ptr: *u8 = page.zalloc(10);
+    var ptr: *u8 = page.zalloc(10);
+    uart.puts("Alloc'd\n");
+    // page.printPageTable();
+    page.printPageContents(ptr);
+    // uart.puts("\n");
+    page.dealloc(ptr);
+    uart.puts("Dealloc'd\n");
     // page.printPageTable();
     //ecall to test trapping
     // asm volatile ("ecall");
