@@ -4,6 +4,7 @@ const cpu = @import("cpu.zig");
 const plic = @import("plic.zig");
 const fmt = @import("std").fmt;
 const page = @import("page.zig");
+const kmem = @import("kmem.zig");
 // const uart_base_addr: usize = 0x10000000;
 
 // pub var HEAP_START: usize = 0;
@@ -18,6 +19,9 @@ export fn kinit() void {
 
     page.init();
     uart.puts("Page Table Initd\n");
+
+    kmem.init();
+    uart.puts("KMem functionality Initd\n");
 
     // Set up the PLIC
     plic.enable(10);
