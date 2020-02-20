@@ -50,22 +50,12 @@ export fn kmain() void {
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
     page.printPageAllocations();
     var c = kmem.kmalloc(32 * @sizeOf(u8));
-    c = cpu.strcpy(c, "Hello!\n");
-    kmem.kfree(c);
-    var d = kmem.kzmalloc(32 * @sizeOf(u8));
-    // d = cpu.strcpy(d, "Hello, World!\n");
-    // var cptr = @ptrCast([*]u8, c); //need to cast as this to use [] syntax :/
-    // const tst = "Hello!\n"; //Can't just assign a const string :((((
-    // for (tst) |val, i| {
-    //     cptr[i] = val;
-    // }
+    c = cpu.strcpy(c, "hello!\n");
+
     uart.print(c);
-    uart.print(d);
     const caddr = cpu.dword2hex(@ptrToInt(c));
-    const daddr = cpu.dword2hex(@ptrToInt(d));
     uart.puts(caddr);
     uart.puts("\n");
-    uart.puts(daddr);
     // uart.print(d);
 
     while (true) {}

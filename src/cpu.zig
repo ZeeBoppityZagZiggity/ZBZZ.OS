@@ -9,10 +9,10 @@ pub fn mscratch_write(val: usize) void {
 }
 
 //I Made this so we can copy const string arrays to a pointer.
-pub fn strcpy(dest: *u8, src: []const u8) *u8 {
-    var ptr = @ptrCast([*]u8, dest);
+pub fn strcpy(dest: [*]u8, src: []const u8) [*]u8 {
+    // var ptr = @ptrCast([*]u8, dest);
     for (src) |val, i| {
-        ptr[i] = val;
+        dest[i] = val;
     }
     return dest;
 }

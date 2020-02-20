@@ -62,84 +62,89 @@ pub fn init() void {
     const num_pages = HEAP_SIZE / PAGE_SIZE;
 
     var i: usize = 0;
+    var ptr = @intToPtr([*]Page, HEAP_START);
     while (i < num_pages) {
-        var ptr = @intToPtr(*Page, HEAP_START + i);
+        // var ptr = @intToPtr(*Page, HEAP_START + i);
         // var ptr = @ptrCast(*Page, ptr1);
         // var p: Page = ptr.*;
-        ptr.*.clear();
+        ptr[i].clear();
         i += 1;
     }
 
     ALLOC_START = (HEAP_START + num_pages * @sizeOf(Page) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 }
 
-pub fn alloc(pages: usize) *u8 {
+pub fn alloc(pages: usize) [*]u8 {
     const uart = uart_lib.MakeUART();
     const num_pages = HEAP_SIZE / PAGE_SIZE;
     var i: usize = 0;
+    var ptr = @intToPtr([*]Page, HEAP_START);
     while (i < (num_pages - pages)) {
         var found: bool = false;
-        var ptr = @intToPtr(*Page, HEAP_START + i);
-        if (ptr.*.is_free()) {
+        // var ptr = @intToPtr(*Page, HEAP_START + i);
+        if (ptr[i].is_free()) {
             // uart.puts("Found a page\n");
             found = true;
             var j: usize = i;
             while (j < (i + pages)) {
-                var jptr = @intToPtr(*Page, HEAP_START + j);
-                if (jptr.*.is_taken()) {
+                // var jptr = @intToPtr(*Page, HEAP_START + j);
+                if (ptr[j].is_taken()) {
                     found = false;
                     break;
                 }
                 j += 1;
             }
         }
+        // uart.puts("Here\n");
 
         if (found) {
             var k: usize = i;
             while (k < (i + pages - 1)) {
-                var kptr = @intToPtr(*Page, HEAP_START + k);
-                kptr.*.set_flag(PageBits.Taken);
+                // var kptr = @intToPtr(*Page, HEAP_START + k);
+                ptr[k].set_flag(PageBits.Taken);
                 k += 1;
             }
-            var kptr = @intToPtr(*Page, HEAP_START + i + pages - 1);
-            kptr.*.set_flag(PageBits.Taken);
-            kptr.*.set_flag(PageBits.Last);
+            // uart.puts("here?\n");
+            // var kptr = @intToPtr(*Page, HEAP_START + i + pages - 1);
+            ptr[k].set_flag(PageBits.Taken);
+            ptr[k].set_flag(PageBits.Last);
             // uart.puts("alloc!\n");
-            return @intToPtr(*u8, (ALLOC_START + (PAGE_SIZE * i)));
+            return @intToPtr([*]u8, (ALLOC_START + (PAGE_SIZE * i)));
         }
 
         i += 1;
     }
     // uart.puts("No page found :(\n");
-    var u: *u8 = undefined;
+    var u: [*]u8 = undefined;
     return u;
 }
 
-pub fn zalloc(pages: usize) *u8 {
-    var ptr: *u8 = alloc(pages);
+pub fn zalloc(pages: usize) [*]u8 {
+    var ptr: [*]u8 = alloc(pages);
     var base_addr = @ptrToInt(ptr);
     var size: usize = (PAGE_SIZE * pages) / 8;
     var i: usize = 0;
+    var big_ptr = @intToPtr([*]usize, base_addr);
     while (i < size) {
-        var big_ptr = @intToPtr(*usize, base_addr + (i * 8));
-        big_ptr.* = 0;
+        // var big_ptr = @intToPtr(*usize, base_addr + (i * 8));
+        big_ptr[i] = 0;
         i += 1;
     }
     return ptr;
 }
 
-pub fn dealloc(ptr: *u8) void {
+pub fn dealloc(ptr: [*]u8) void {
     var base_addr = HEAP_START + ((@ptrToInt(ptr) - ALLOC_START) / PAGE_SIZE);
     var p = @intToPtr(*Page, base_addr);
     var i: usize = 0;
-    while (p.*.is_taken() and !(p.*.is_last())) {
-        p.*.clear();
+    while (p[i].is_taken() and !(p[i].is_last())) {
+        p[i].clear();
         i += 1;
-        p = @intToPtr(*Page, base_addr + i);
+        // p = @intToPtr(*Page, base_addr + i);
     }
 
-    assert(p.*.is_last() == true);
-    p.*.clear();
+    assert(p[i].is_last() == true);
+    p[i].clear();
 }
 
 pub fn addr2hex(addr: *u8) [2]u8 {
@@ -228,9 +233,10 @@ pub fn printPageTable() void {
     const num_pages = HEAP_SIZE / PAGE_SIZE;
 
     var i: usize = 0;
+    var ptr = @intToPtr([*]Page, HEAP_START);
     while (i < num_pages) {
-        var ptr = @intToPtr(*Page, HEAP_START + i);
-        var flag = &ptr.*.flags;
+        // var ptr = @intToPtr(*Page, HEAP_START + i);
+        var flag = &ptr[i].flags;
         uart.puts(addr2hex(flag));
         // var p: Page = ptr.*;
         // ptr.*.clear();

@@ -71,14 +71,14 @@ pub const UART = struct {
         // }
     }
 
-    pub fn print(self: UART, din: *u8) void {
+    pub fn print(self: UART, din: [*]u8) void {
         var base = @ptrToInt(din);
         var i: usize = 0;
-        var ptr = @intToPtr(*u8, base + i);
-        while (ptr.* != 0) {
-            self.put(ptr.*);
+        // var ptr = @intToPtr(*u8, base + i);
+        while (din[i] != 0) {
+            self.put(din[i]);
             i += 1;
-            ptr = @intToPtr(*u8, base + i);
+            // ptr = @intToPtr(*u8, base + i);
         }
     }
 
