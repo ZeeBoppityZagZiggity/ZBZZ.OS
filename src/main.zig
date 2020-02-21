@@ -1,4 +1,5 @@
 const uart_lib = @import("uart.zig").UART;
+const string_lib = @import("string.zig").String;
 const trap = @import("trap.zig");
 const cpu = @import("cpu.zig");
 const plic = @import("plic.zig");
@@ -50,10 +51,14 @@ export fn kmain() void {
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
     page.printPageAllocations();
     var c = kmem.kmalloc(32 * @sizeOf(u8));
-    c = cpu.strcpy(c, "hello!\n");
+    c = string_lib.strcpy(c, "hello!\n");
+    
+    var mystr = string_lib.String("Hello as well!\n");
+    uart.print(mystr.z_str());
+    mystr.free();
 
     uart.print(c);
-    const caddr = cpu.dword2hex(@ptrToInt(c));
+    const caddr = string_lib.dword2hex(@ptrToInt(c));
     uart.puts(caddr);
     uart.puts("\n");
     // uart.print(d);

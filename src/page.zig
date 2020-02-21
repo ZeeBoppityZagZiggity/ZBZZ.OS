@@ -1,4 +1,5 @@
 const uart_lib = @import("uart.zig").UART;
+const string_lib = @import("string.zig").String;
 const cpu = @import("cpu.zig");
 const assert = @import("std").debug.assert;
 
@@ -175,29 +176,29 @@ pub fn printPageAllocations() void {
     var alloc_tail = ALLOC_START + num_pages * PAGE_SIZE;
     //Zee Bop Ziggity Zag, I'll put the developer of Zig in a bodybag :)
     uart.puts("PAGE ALLOCATION TABLE: \nMETA: ");
-    uart.puts(cpu.dword2hex(@ptrToInt(head)));
+    uart.puts(string_lib.dword2hex(@ptrToInt(head)));
     uart.puts(" -> ");
-    uart.puts(cpu.dword2hex(@ptrToInt(tail)));
+    uart.puts(string_lib.dword2hex(@ptrToInt(tail)));
     uart.puts("\nPHYS: ");
-    uart.puts(cpu.dword2hex(alloc_head));
+    uart.puts(string_lib.dword2hex(alloc_head));
     uart.puts(" -> ");
-    uart.puts(cpu.dword2hex(alloc_tail));
+    uart.puts(string_lib.dword2hex(alloc_tail));
     uart.puts("\n");
     var num: usize = 0;
     while (@ptrToInt(head) < @ptrToInt(tail)) {
         if (head.*.is_taken()) {
             var start = @ptrToInt(head);
             var memaddr = ALLOC_START + (start - HEAP_START) * PAGE_SIZE;
-            uart.puts(cpu.dword2hex(memaddr));
+            uart.puts(string_lib.dword2hex(memaddr));
             uart.puts(" => ");
             while (true) {
                 num += 1;
                 if (head.*.is_last()) {
                     var end = @ptrToInt(head);
                     var endmemaddr = ALLOC_START + ((end - HEAP_START) * PAGE_SIZE) + PAGE_SIZE - 1;
-                    uart.puts(cpu.dword2hex(endmemaddr));
+                    uart.puts(string_lib.dword2hex(endmemaddr));
                     uart.puts(": ");
-                    uart.puts(cpu.byte2hex((@truncate(u8, end - start + 1))));
+                    uart.puts(string_lib.byte2hex((@truncate(u8, end - start + 1))));
                     uart.puts("\n");
                     break;
                 }
@@ -207,7 +208,7 @@ pub fn printPageAllocations() void {
         head = @intToPtr(*Page, @ptrToInt(head) + 1);
     }
     uart.puts("Free pages: ");
-    uart.puts(cpu.byte2hex(@truncate(u8, num_pages - num)));
+    uart.puts(string_lib.byte2hex(@truncate(u8, num_pages - num)));
     uart.puts("\n");
 }
 
