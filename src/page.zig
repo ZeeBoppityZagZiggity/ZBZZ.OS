@@ -247,3 +247,91 @@ pub fn printPageTable() void {
         }
     }
 }
+
+////////MMU FUNCTIONALITY BELOW////////////
+
+pub const EntryBits = enum(usize) {
+    Valid = 1 << 0,
+    Read = 1 << 1,
+    Write = 1 << 2,
+    Execute = 1 << 3,
+    User = 1 << 4,
+    Global = 1 << 5,
+    Access = 1 << 6,
+    Dirty = 1 << 7,
+
+    ReadWrite = 1 << 1 | 1 << 2,
+    ReadExecute = 1 << 1 | 1 << 3,
+    ReadWriteExecute = 1 << 1 | 1 << 2,
+
+    UserReadWrite = 1 << 1 | 1 << 2 | 1 << 4,
+    UserReadExecute = 1 << 1 | 1 << 3 | 1 << 4,
+    UserReadWriteExecute = 1 << 1 | 1 << 2 | 1 << 3 | 1 << 4,
+};
+
+pub const Entry = packed struct {
+    entry: usize,
+
+    pub fn get_entry(self: Entry) usize {
+        return self.entry;
+    }
+
+    pub fn set_entry(self: Entry, val: usize) void {
+        self.entry = entry;
+        //self = AllocList{ .flags_size = (self.flags_size & ~@enumToInt(AllocListFlags.Taken)) };
+    }
+
+    pub fn is_valid(self: Entry) bool {
+        return (self.get_entry() & @enumToInt(EntryBits.Valid)) != 0;
+    }
+
+    pub fn is_invalid(self: Entry) bool {
+        return !self.is_valid();
+    }
+
+    pub fn is_leaf(self: Entry) bool {
+        return (self.get_entry() & 0xe) != 0;
+    }
+
+    pub fn is_branch(self: Entry) bool {
+        return !self.is_leaf();
+    }
+};
+
+pub const Table = packed struct {
+    entries: [512]Entry,
+
+    const len: usize = 512;
+};
+
+pub fn map(root: Table, vaddr: usize, paddr: usize, bits: usize, level: usize) void {
+    if (bits & 0xe != 0) {
+        uart_lib.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.");
+    }
+    var vpn = [3]usize{ ((vaddr >> 12) & 0x1ff), ((vaddr >> 21) & 0x1ff), ((vaddr >> 30) & 0x1ff) };
+
+    var ppn = [3]usize{ ((paddr >> 12) & 0x1ff), ((paddr >> 21) & 0x1ff), ((paddr >> 30) & 0x3ffffff) };
+
+    var v = root.entries[vpn[2]];
+
+    var arr = [3]u8{ 2, 1, 0 };
+    for (arr) |i| {
+        if (i == level) {
+            break;
+        }
+
+        if (v.is_invalid()) {
+            var page: [*]u8 = zalloc(1);
+
+            v.set_entry((@ptrToInt(page) >> 2) | @enumToInt(EntryBits.Valid));
+        }
+
+        entry = @intToPtr(*Entry, ((v.get_entry() & ~0x3ff) << 2));
+
+        v = @intToPtr(*Entry, (@ptrToInt(entry) + vpn[i])).*;
+    }
+
+    var entry = (ppn[2] << 28) | (ppn[1] << 19) | (ppn[0] << 10) | bits | @enumToInt(EntryBits.Valid) | @enumToInt(EntryBits.Dirty) | @enumToInt(EntryBits.Access);
+
+    v.set_entry(entry);
+}
