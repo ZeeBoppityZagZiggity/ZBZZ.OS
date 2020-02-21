@@ -335,3 +335,34 @@ pub fn map(root: Table, vaddr: usize, paddr: usize, bits: usize, level: usize) v
 
     v.set_entry(entry);
 }
+
+pub fn unmap(root: Table) void {
+    var i = 0;
+    while (true) {
+        if (i == root.len) {
+            break;
+        }
+
+        var entry_lvl_2 = root.entries[i];
+        if (entry_lvl_2.is_valid() and entry_lvl_2.is_branch()) {
+            var mem_addr_lvl_1: usize = (entry_lvl_2.get_entry() & ~0x3ff) << 2;
+            var tabel_lvl_1 = @intToPtr(*Table, mem_addr_lvl_1);
+
+            var j = 0;
+            while (true) {
+                if (j == root.len) {
+                    break;
+                }
+
+                var entry_lvl_1 = tabel_lvl_1.entries[j];
+                if (entry_lvl_1.is_valid() and entry_lvl_1.is_branch()) {
+                    var memaddr_lvl_0: usize = (entry_lvl_1.get_entry() & ~0x3ff) << 2;
+                    dealloc(@intToPtr([*]u8, memaddr_lvl_0));
+                }
+                j += 1;
+            } // end while(true)
+            dealloc(@intToPtr([*]u8, memaddr_lvl_1));
+        } // end if(entry_level_2.is_valid() and entry_level_2.is_branch())
+        i += 1;
+    } // end while(true)
+}
