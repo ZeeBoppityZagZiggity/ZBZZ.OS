@@ -52,9 +52,22 @@ pub const AllocList = packed struct {
 var KMEM_HEAD: [*]AllocList = undefined;
 var KMEM_ALLOC: usize = 0;
 //Eventually, this will be a table object and not a singular page
-var KMEM_PAGE_TABLE: [*]u8 = undefined;
+// var KMEM_PAGE_TABLE: [*]u8 = undefined;
+var KMEM_PAGE_TABLE: [*]page.Table = undefined;
 //var KMEM_PAGE_TABLE: *Table = null;
 //Eventually, this will be a table object and not a singular page
+
+pub fn get_head() [*]u8 {
+    return @ptrCast([*]u8, KMEM_HEAD);
+}
+
+pub fn get_page_table() [*]Table {
+    return KMEM_PAGE_TABLE;
+}
+
+pub fn get_num_allocations() usize {
+    return KMEM_ALLOC;
+}
 
 pub fn init() void {
     KMEM_ALLOC = 64;
@@ -67,9 +80,9 @@ pub fn init() void {
     KMEM_HEAD = @ptrCast([*]AllocList, k_alloc);
     KMEM_HEAD[0].set_free();
     KMEM_HEAD[0].set_size(KMEM_ALLOC * page.PAGE_SIZE);
-    //KMEM_PAGE_TABLE = @intToPtr(*Table,page.zalloc(1));
+    KMEM_PAGE_TABLE = @ptrCast([*]page.Table,page.zalloc(1));
     // KMEM_PAGE_TABLE = @intToPtr(*u8, page.zalloc(1));
-    KMEM_PAGE_TABLE = page.zalloc(1);
+    // KMEM_PAGE_TABLE = page.zalloc(1);
 }
 
 pub fn align_val(val: usize, order: usize) usize {

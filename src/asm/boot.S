@@ -41,9 +41,25 @@ contpoint:
 	# csrw mtvec, t2 
 	# li t3, (1 << 3) | (1 << 7) | (1 << 11) 
 	# csrw mie, t3 
+
+	# Send heap information to zig
 	la 	a0, _heap_start 
 	la 	a1, _heap_size
 	call kheap
+
+	# Send ELF file information to zig 
+	# la a0, _text 
+	# la a1, _etext 
+	# la a2, _rodata
+	# la a3, _erodata
+	# la a4, _data 
+	# call kelf1 
+	# la a0, _edata 
+	# la a1, _bss 
+	# la a2, _ebss 
+	# la a3, _t0
+	# la a4, _sp0
+	# call kelf2
 	
 	la		ra, post_init
 	mret

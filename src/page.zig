@@ -366,3 +366,31 @@ pub fn unmap(root: Table) void {
         i += 1;
     } // end while(true)
 }
+
+pub fn virt_to_phys(root: Table, vaddr: usize) usize {
+    var vpn = [3]u16{
+        (vaddr >> 12) & 0x1ff,
+        (vaddr >> 21) & 0x1ff, 
+        (vaddr >> 30) & 0x1ff
+        };
+
+    var v = &root.entries[vpn[2]]; 
+    var i: int = 2; 
+    while(i >= 0) {
+        if (v.is_invalid()) {
+            break;
+        } else if (v.is_leaf()) {
+            var off_mask: usize = (1 << (12 + i * 9)) - 1; 
+            var vaddr_pgoff = vaddr & off_mask; 
+            var addr = (@intCast(usize, v.get_entry()) << 2) & ~off_mask; 
+            return (addr | vaddr_pgoff);
+        }
+
+        var entry = @intToPtr([*]Entry, ((v.get_entry() & ~0x3ff) << 2));
+
+        v = entry[vpn[i-1]];
+
+        i-=1;
+    }
+    return 0;
+}
