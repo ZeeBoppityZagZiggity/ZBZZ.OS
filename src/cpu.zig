@@ -7,3 +7,10 @@ pub fn mscratch_write(val: usize) void {
         : [val] "{x10}" (val)
     );
 }
+
+pub fn satp_write(val: usize) void {
+    asm volatile ("csrw satp, %[val]"
+        :
+        : [val] "{x10}" (val)
+    );
+}

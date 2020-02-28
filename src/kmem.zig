@@ -61,7 +61,7 @@ pub fn get_head() [*]u8 {
     return @ptrCast([*]u8, KMEM_HEAD);
 }
 
-pub fn get_page_table() [*]Table {
+pub fn get_page_table() [*]page.Table {
     return KMEM_PAGE_TABLE;
 }
 

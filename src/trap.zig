@@ -92,6 +92,22 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 uart.puts("ecall from m-mode\n");
                 // asm volatile("j .");
             },
+            //Page Faults
+            12 => {
+                // Instruction page fault
+                uart.puts("Instruction page fault CPU 0 (this is hardcoded btw)\n");
+                mepc += 4;
+            },
+            13 => {
+                //Load page fault
+                uart.puts("Load Page Fault CPU 0 (this is hardcoded btw)\n");
+                mepc += 4;
+            },
+            15 => {
+                //Store page fault
+                uart.puts("Store Page Fault CPU 0 (this is hardcoded btw)\n");
+                mepc += 4;
+            },
             else => {
                 uart.puts("other\n");
             },

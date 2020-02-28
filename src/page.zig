@@ -262,7 +262,7 @@ pub const EntryBits = enum(usize) {
 
     ReadWrite = 1 << 1 | 1 << 2,
     ReadExecute = 1 << 1 | 1 << 3,
-    ReadWriteExecute = 1 << 1 | 1 << 2,
+    ReadWriteExecute = 1 << 1 | 1 << 2 | 1 << 3,
 
     UserReadWrite = 1 << 1 | 1 << 2 | 1 << 4,
     UserReadExecute = 1 << 1 | 1 << 3 | 1 << 4,
@@ -277,8 +277,8 @@ pub const Entry = packed struct {
     }
 
     pub fn set_entry(self: Entry, val: usize) void {
-        self.entry = entry;
-        //self = AllocList{ .flags_size = (self.flags_size & ~@enumToInt(AllocListFlags.Taken)) };
+        //self.entry = val;
+        self = Entry{ .entry = val };
     }
 
     pub fn is_valid(self: Entry) bool {
@@ -306,7 +306,7 @@ pub const Table = packed struct {
 
 pub fn map(root: Table, vaddr: usize, paddr: usize, bits: usize, level: usize) void {
     if (bits & 0xe != 0) {
-        uart_lib.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.");
+        //uart_lib.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.");
     }
     var vpn = [3]usize{ ((vaddr >> 12) & 0x1ff), ((vaddr >> 21) & 0x1ff), ((vaddr >> 30) & 0x1ff) };
 
@@ -314,6 +314,7 @@ pub fn map(root: Table, vaddr: usize, paddr: usize, bits: usize, level: usize) v
 
     var v = root.entries[vpn[2]];
 
+    var stupidTmpDumbZig: usize =0x3ff; 
     var arr = [3]u8{ 2, 1, 0 };
     for (arr) |i| {
         if (i == level) {
@@ -326,7 +327,7 @@ pub fn map(root: Table, vaddr: usize, paddr: usize, bits: usize, level: usize) v
             v.set_entry((@ptrToInt(page) >> 2) | @enumToInt(EntryBits.Valid));
         }
 
-        entry = @intToPtr(*Entry, ((v.get_entry() & ~0x3ff) << 2));
+        var entry = @intToPtr(*Entry, ((v.get_entry() & ~stupidTmpDumbZig) << 2));
 
         v = @intToPtr(*Entry, (@ptrToInt(entry) + vpn[i])).*;
     }

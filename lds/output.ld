@@ -85,9 +85,12 @@ SECTIONS
   /* Read-only data segment */
   .rodata :
   {
+    PROVIDE( _rodata = ABSOLUTE(.) ); 
     *(.rdata)
     *(.rodata .rodata.*)
     *(.gnu.linkonce.r.*)
+    . = ALIGN(8);
+    PROVIDE( _erodata = ABSOLUTE(.) );
   } >ram AT>ram :ram_ro
 
   . = ALIGN(8);
