@@ -217,13 +217,14 @@ pub fn printPageContents(addr: *u8) void {
     var base_address = @ptrToInt(addr);
     var i: usize = 0;
     while (i < PAGE_SIZE) {
-        var ptr = @intToPtr(*u8, base_address + i);
+        var ptr = @intToPtr(*usize, base_address + i);
         // var flag = &ptr.*.flags;
-        uart.puts(addr2hex(ptr));
-        i += 1;
+        // uart.puts(addr2hex(ptr));
+        uart.puts(string_lib.dword2hex(ptr.*));
+        i += 8;
         if ((i % 32) == 0) {
             uart.puts("\n");
-        } else if ((i % 4) == 0) {
+        } else {
             uart.puts(" ");
         }
     }
@@ -300,41 +301,44 @@ pub const Entry = packed struct {
 
 pub const Table = packed struct {
     entries: [512]Entry,
-
-    const len: usize = 512;
 };
 
-pub fn map(root: Table, vaddr: usize, paddr: usize, bits: usize, level: usize) void {
-    if (bits & 0xe != 0) {
-        //uart_lib.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.");
+pub fn map(root: *Table, vaddr: usize, paddr: usize, bits: usize, level: usize) void {
+    const uart = uart_lib.MakeUART();
+    if (bits & 0xe == 0) {
+        uart.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.\n");
+        asm volatile ("j .");
     }
     var vpn = [3]usize{ ((vaddr >> 12) & 0x1ff), ((vaddr >> 21) & 0x1ff), ((vaddr >> 30) & 0x1ff) };
 
     var ppn = [3]usize{ ((paddr >> 12) & 0x1ff), ((paddr >> 21) & 0x1ff), ((paddr >> 30) & 0x3ffffff) };
+    // uart.puts(string_lib.dword2hex(ppn[2]));
+    // uart.puts("\n");
+    var v = &root.*.entries[vpn[2]];
 
-    var v = root.entries[vpn[2]];
-
-    var stupidTmpDumbZig: usize =0x3ff; 
+    var stupidTmpDumbZig: usize = 0x3ff;
     var arr = [3]u8{ 2, 1, 0 };
     for (arr) |i| {
         if (i == level) {
             break;
         }
-
-        if (v.is_invalid()) {
+        if (v.*.is_invalid()) {
             var page: [*]u8 = zalloc(1);
 
-            v.set_entry((@ptrToInt(page) >> 2) | @enumToInt(EntryBits.Valid));
+            v.*.set_entry((@ptrToInt(page) >> 2) | @enumToInt(EntryBits.Valid));
         }
 
-        var entry = @intToPtr(*Entry, ((v.get_entry() & ~stupidTmpDumbZig) << 2));
+        // var entry = @intToPtr(*Entry, ((v.*.get_entry() & ~stupidTmpDumbZig) << 2));
+        var nextTable = @intToPtr(*Table, ((v.*.get_entry() & ~stupidTmpDumbZig) << 2));
 
-        v = @intToPtr(*Entry, (@ptrToInt(entry) + vpn[i])).*;
+        // v = @intToPtr(*Entry, (@ptrToInt(entry) + vpn[i - 1]));
+        v = &nextTable.*.entries[vpn[i - 1]];
     }
 
     var entry = (ppn[2] << 28) | (ppn[1] << 19) | (ppn[0] << 10) | bits | @enumToInt(EntryBits.Valid) | @enumToInt(EntryBits.Dirty) | @enumToInt(EntryBits.Access);
-
-    v.set_entry(entry);
+    // uart.puts(string_lib.dword2hex(entry));
+    // uart.puts("\n");
+    v.*.set_entry(entry);
 }
 
 pub fn unmap(root: Table) void {
@@ -368,30 +372,37 @@ pub fn unmap(root: Table) void {
     } // end while(true)
 }
 
-pub fn virt_to_phys(root: Table, vaddr: usize) usize {
-    var vpn = [3]u16{
+pub fn virt_to_phys(root: *Table, vaddr: usize) usize {
+    const uart = uart_lib.MakeUART();
+    var vpn = [3]usize{
         (vaddr >> 12) & 0x1ff,
-        (vaddr >> 21) & 0x1ff, 
-        (vaddr >> 30) & 0x1ff
-        };
+        (vaddr >> 21) & 0x1ff,
+        (vaddr >> 30) & 0x1ff,
+    };
 
-    var v = &root.entries[vpn[2]]; 
-    var i: int = 2; 
-    while(i >= 0) {
-        if (v.is_invalid()) {
+    var v = &root.*.entries[vpn[2]];
+    // var i: usize = 1;
+    var arr = [3]u8{ 2, 1, 0 };
+    for (arr) |i| {
+        if (v.*.is_invalid()) {
+            uart.puts(":(");
             break;
-        } else if (v.is_leaf()) {
-            var off_mask: usize = (1 << (12 + i * 9)) - 1; 
-            var vaddr_pgoff = vaddr & off_mask; 
-            var addr = (@intCast(usize, v.get_entry()) << 2) & ~off_mask; 
+        } else if (v.*.is_leaf()) {
+            // var off_mask: usize = (1 << (12 + i * 9)) - 1;
+            var off_mask: usize = 0;
+            switch (i) {
+                2 => off_mask = (1 << 30) - 1,
+                1 => off_mask = (1 << 21) - 1,
+                else => off_mask = (1 << 12) - 1,
+            }
+            var vaddr_pgoff: usize = vaddr & off_mask;
+            var addr: usize = (v.*.get_entry() << 2) & ~off_mask;
             return (addr | vaddr_pgoff);
         }
+        var stupidTmpDumbZig: usize = 0x3ff;
+        var entry = @intToPtr(*Entry, ((v.get_entry() & ~stupidTmpDumbZig) << 2));
 
-        var entry = @intToPtr([*]Entry, ((v.get_entry() & ~0x3ff) << 2));
-
-        v = entry[vpn[i-1]];
-
-        i-=1;
+        v = @intToPtr(*Entry, (@ptrToInt(entry) + vpn[i - 1]));
     }
     return 0;
 }

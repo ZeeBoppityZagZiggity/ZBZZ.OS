@@ -27,13 +27,13 @@ pub fn id_map_range(root: *page.Table, start: usize, end: usize, bits: usize) vo
     var num_kb_pages = (kmem.align_val(end, 12) - memaddr) / page.PAGE_SIZE;
     var i: usize = 0;
     while (i < num_kb_pages) {
-        page.map(root.*, memaddr, memaddr, bits, 0);
+        page.map(root, memaddr, memaddr, bits, 0);
         i += 1;
         memaddr += 1 << 12;
     }
 }
 
-export fn kinit() void {
+export fn kinit() usize {
     trap.emptyfunc();
     const x = 0;
     // uart.uart_init();
@@ -44,13 +44,15 @@ export fn kinit() void {
     kmem.init();
     uart.puts("KMem functionality Initd\n");
 
-    var root_ptr: *page.Table = @intToPtr(*page.Table,@ptrToInt(kmem.get_page_table()));
+    // page.printPageAllocations();
+
+    var root_ptr: *page.Table = @intToPtr(*page.Table, @ptrToInt(kmem.get_page_table()));
     var root_u: usize = @ptrToInt(root_ptr);
-    var kheap_head: *u8 = @intToPtr(*u8,@ptrToInt(kmem.get_head()));
+    var kheap_head: *u8 = @intToPtr(*u8, @ptrToInt(kmem.get_head()));
     var total_pages: usize = kmem.get_num_allocations();
 
     id_map_range(root_ptr, @ptrToInt(kheap_head), @ptrToInt(kheap_head) + total_pages * 4096, @enumToInt(page.EntryBits.ReadWrite));
-    //Map Heap descriptors
+    // Map Heap descriptors
     var num_pages: usize = page.HEAP_SIZE / page.PAGE_SIZE;
     id_map_range(root_ptr, page.HEAP_START, page.HEAP_START + num_pages, @enumToInt(page.EntryBits.ReadWrite));
     //Map executable section
@@ -64,11 +66,12 @@ export fn kinit() void {
     //Map kernel stack
     id_map_range(root_ptr, _kernel_stack, _ekernel_stack, @enumToInt(page.EntryBits.ReadWrite));
     //Map UART
-    id_map_range(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite));
+    // id_map_range(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite));
+    page.map(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite), 0);
 
     var root_ppn: usize = root_u >> 12;
-    var satp_val: usize = 8 << 60 | root_ppn;
-    cpu.satp_write(satp_val);
+    var satp_val: usize = (8 << 60) | root_ppn;
+    // cpu.satp_write(satp_val);
 
     // Set up the PLIC
     plic.enable(10);
@@ -80,6 +83,8 @@ export fn kinit() void {
     const tf_ptr = @ptrToInt(tf);
     //Store it in mscratch
     cpu.mscratch_write(tf_ptr);
+    uart.puts("Exiting kinit\n");
+    return satp_val;
 }
 
 //This stupid function exists because Zig's compiler has a (known) bug
@@ -109,21 +114,16 @@ export fn kmain() void {
     //Reinit uart
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
-    var ptr = page.zalloc(10);
+    // var ptr = page.zalloc(10);
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
-    page.printPageAllocations();
-    var c = kmem.kmalloc(32 * @sizeOf(u8));
-    c = string_lib.strcpy(c, "hello!\n");
+    // page.printPageAllocations();
 
-    var mystr = string_lib.String("Hello as well!\n");
-    uart.print(mystr.z_str());
-    mystr.free();
+    // var mystr = string_lib.String("Hello as well!\n");
+    // uart.print(mystr.z_str());
+    // mystr.free();
 
-    uart.print(c);
-    const caddr = string_lib.dword2hex(@ptrToInt(c));
-    uart.puts(caddr);
-    uart.puts("\n");
-    // uart.print(d);
+    // var c: usize = 0x80000000;
+    // var
 
     while (true) {}
 }

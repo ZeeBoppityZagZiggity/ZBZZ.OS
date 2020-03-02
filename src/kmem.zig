@@ -80,14 +80,20 @@ pub fn init() void {
     KMEM_HEAD = @ptrCast([*]AllocList, k_alloc);
     KMEM_HEAD[0].set_free();
     KMEM_HEAD[0].set_size(KMEM_ALLOC * page.PAGE_SIZE);
-    KMEM_PAGE_TABLE = @ptrCast([*]page.Table,page.zalloc(1));
+    KMEM_PAGE_TABLE = @ptrCast([*]page.Table, page.zalloc(1));
     // KMEM_PAGE_TABLE = @intToPtr(*u8, page.zalloc(1));
     // KMEM_PAGE_TABLE = page.zalloc(1);
 }
 
 pub fn align_val(val: usize, order: usize) usize {
     var one: usize = 1;
-    var o: usize = (one << 3) - 1; //WTF do you mean this has to be comptime known???????
+    // var o: usize = (one << 3) - 1; //WTF do you mean this has to be comptime known???????
+    var o: usize = 0;
+    switch (order) {
+        3 => o = (one << 3) - 1,
+        12 => o = (one << 12) - 1,
+        else => o = (one << 12) - 1,
+    }
     return ((val + o) & ~o);
 }
 
