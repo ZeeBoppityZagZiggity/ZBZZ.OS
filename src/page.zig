@@ -251,6 +251,8 @@ pub fn printPageTable() void {
 
 ////////MMU FUNCTIONALITY BELOW////////////
 
+pub const root_len = 512;
+
 pub const EntryBits = enum(usize) {
     Valid = 1 << 0,
     Read = 1 << 1,
@@ -341,21 +343,21 @@ pub fn map(root: *Table, vaddr: usize, paddr: usize, bits: usize, level: usize) 
     v.*.set_entry(entry);
 }
 
-pub fn unmap(root: Table) void {
+pub fn unmap(root: *Table) void {
     var i = 0;
     while (true) {
-        if (i == root.len) {
+        if (i == root_len) {
             break;
         }
 
-        var entry_lvl_2 = root.entries[i];
+        var entry_lvl_2 = root.*.entries[i];
         if (entry_lvl_2.is_valid() and entry_lvl_2.is_branch()) {
             var mem_addr_lvl_1: usize = (entry_lvl_2.get_entry() & ~0x3ff) << 2;
             var tabel_lvl_1 = @intToPtr(*Table, mem_addr_lvl_1);
 
             var j = 0;
             while (true) {
-                if (j == root.len) {
+                if (j == root_len) {
                     break;
                 }
 
