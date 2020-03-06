@@ -280,7 +280,6 @@ pub const Entry = packed struct {
     }
 
     pub fn set_entry(self: Entry, val: usize) void {
-        //self.entry = val;
         self = Entry{ .entry = val };
     }
 

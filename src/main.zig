@@ -66,7 +66,6 @@ export fn kinit() usize {
     //Map kernel stack
     id_map_range(root_ptr, _kernel_stack, _ekernel_stack, @enumToInt(page.EntryBits.ReadWrite));
     //Map UART
-    // id_map_range(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite));
     page.map(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite), 0);
 
     var root_ppn: usize = root_u >> 12;
