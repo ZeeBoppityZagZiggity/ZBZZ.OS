@@ -54,7 +54,7 @@ export fn kinit() usize {
     id_map_range(root_ptr, @ptrToInt(kheap_head), @ptrToInt(kheap_head) + total_pages * 4096, @enumToInt(page.EntryBits.ReadWrite));
     // Map Heap descriptors
     var num_pages: usize = page.HEAP_SIZE / page.PAGE_SIZE;
-    id_map_range(root_ptr, page.HEAP_START, page.HEAP_START + num_pages, @enumToInt(page.EntryBits.ReadWrite));
+    id_map_range(root_ptr, page.HEAP_START, page.HEAP_START + page.HEAP_SIZE, @enumToInt(page.EntryBits.ReadWrite));
     //Map executable section
     id_map_range(root_ptr, _text, _etext, @enumToInt(page.EntryBits.ReadExecute));
     //Map rodata section
@@ -114,7 +114,7 @@ export fn kmain() void {
     //Reinit uart
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
-    // var ptr = page.zalloc(10);
+    var ptr = page.zalloc(10);
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
     // page.printPageAllocations();
 
