@@ -83,7 +83,7 @@ export fn kinit() usize {
     cpu.mscratch_write(tf_ptr);
 
     cpu.sscratch_write(cpu.mscratch_read()); 
-    const ktf = @ptrCast(*TrapFrame, &trap.KERNEL_TRAP_FRAME); 
+    const ktf = @ptrCast(*trap.TrapFrame, &trap.KERNEL_TRAP_FRAME); 
     
 
 
