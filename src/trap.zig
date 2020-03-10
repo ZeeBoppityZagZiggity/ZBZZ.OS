@@ -3,6 +3,7 @@ const plic = @import("plic.zig");
 const string_lib = @import("string.zig").String;
 const page = @import("page.zig");
 const kmem = @import("kmem.zig");
+const timer = @import("timer.zig");
 // const uart_base_addr: usize = 0x10000000;
 
 export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: usize, frame: usize) usize {
@@ -21,6 +22,11 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             },
             1 => {
                 uart.puts("Supervisor Software Intterupt\n");
+            },
+            7 => {
+                uart.puts("Timer Interrupt\n");
+                timer.set_timer_ms(0, 1000);
+                mepc = epc;
             },
             11 => { //Machine External Interrupt
                 // Get id from PLIC
@@ -133,7 +139,7 @@ pub fn emptyfunc() void {}
 
 /// TrapFrame
 /// @brief trap frame for storing context during trap handling
-pub const TrapFrame = struct {
+pub const TrapFrame = packed struct {
     regs: [32]usize, //registers
     fregs: [32]usize, //fregisters
     satp: usize, //SATP ?

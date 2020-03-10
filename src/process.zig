@@ -10,7 +10,7 @@ const STACK_PAGES: usize = 2;
 const STACK_ADDR: usize  = 0xf00000000;
 
 // All processes will have a defined starting point in virtual memory.
-const PROCESS_STARTING_ADDR: usize = 0x2000_0000;
+const PROCESS_STARTING_ADDR: usize = 0x20000000;
 
 //TODO: MAKE A List TYPE DATA STRUCTURE FOR THE PROCESSS LIST
 //var PROCESS_LIST: List = undefined;
@@ -20,12 +20,12 @@ var NEXT_PID: u16 = 1;
 //Eventually, this will go away
 //For now, it'll occupy a slot in our process list
 fn init_process() void{
-    while{}
+    while(1){}
 }
 
-pub fn add_process_default(pr: fn()) void {
+pub fn add_process_default(pr: fn()void) void {
     //TODO: LOCKING MECHANISM HERE WHEN APPENDING TO PROCESS_LIST
-    var p: Process::new_default(pr);
+    var p = Process.new_default(pr);
     //PROCESS_LIST.push_back(p)
     //TODO: RELEASE LOCK NOW BRU
 }
@@ -67,7 +67,7 @@ pub const Process = packed struct {
         state:              ProcessState = undefined,
         data:               ProcessData = undefined,
 
-        pub fn new_default(func: fn()) Process{
+        pub fn new_default(func: fn()void) Process{
             var func_addr: usize = @ptrToInt(func);
             var ret_proc = Process{
                     .frame=             trap.TrapFrame.makeTrapFrame(),

@@ -6,6 +6,8 @@ const plic = @import("plic.zig");
 const fmt = @import("std").fmt;
 const page = @import("page.zig");
 const kmem = @import("kmem.zig");
+const timer = @import("timer.zig");
+const proc = @import("process.zig");
 // const uart_base_addr: usize = 0x10000000;
 
 //pub var HEAP_START: usize = 0;
@@ -68,6 +70,10 @@ export fn kinit() usize {
     //Map UART
     page.map(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite), 0);
 
+    //Map CLINT
+    id_map_range(root_ptr, timer.clint_base, timer.clint_end, @enumToInt(page.EntryBits.ReadWrite));
+
+
     var root_ppn: usize = root_u >> 12;
     var satp_val: usize = (8 << 60) | root_ppn;
     // cpu.satp_write(satp_val);
@@ -82,6 +88,7 @@ export fn kinit() usize {
     const tf_ptr = @ptrToInt(tf);
     //Store it in mscratch
     cpu.mscratch_write(tf_ptr);
+    timer.set_timer_ms(0, 1000);
     uart.puts("Exiting kinit\n");
     return satp_val;
 }
@@ -123,6 +130,6 @@ export fn kmain() void {
 
     // var c: usize = 0x80000000;
     // var
-
-    while (true) {}
+    var addr = proc.init();
+    // while (true) {}
 }
