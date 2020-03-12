@@ -7,7 +7,8 @@ const fmt = @import("std").fmt;
 const page = @import("page.zig");
 const kmem = @import("kmem.zig");
 const timer = @import("timer.zig");
-const proc = @import("process.zig");
+// const proc = @import("process.zig");
+// const zlist = @import("zlist.zig");
 // const uart_base_addr: usize = 0x10000000;
 
 //pub var HEAP_START: usize = 0;
@@ -121,6 +122,12 @@ export fn kmain() void {
     const uart = uart_lib.MakeUART();
     uart.puts("Entered Main\n");
     var ptr = page.zalloc(10);
+    m_test();
+    // var head_ptr = zlist.Node.new(10);
+    // var head_ptr = &head;
+    // uart.puts(string_lib.dword2hex(head_ptr.*.data));
+    // zlist.push(head_ptr, 15); 
+    // uart.puts(string_lib.dword2hex(head_ptr.*.data));
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
     // page.printPageAllocations();
 
@@ -130,6 +137,6 @@ export fn kmain() void {
 
     // var c: usize = 0x80000000;
     // var
-    var addr = proc.init();
+    // var addr = proc.init();
     // while (true) {}
 }
