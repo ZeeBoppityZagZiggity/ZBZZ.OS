@@ -1,4 +1,4 @@
-const uart_lib = @import("uart.zig").UART;
+// const uart_lib = @import("uart.zig").UART;
 const string_lib = @import("string.zig").String;
 const trap = @import("trap.zig");
 const cpu = @import("cpu.zig");
@@ -11,8 +11,20 @@ const timer = @import("timer.zig");
 // const zlist = @import("zlist.zig");
 // const uart_base_addr: usize = 0x10000000;
 
+const c = @cImport({
+    @cDefine("_NO_CRT_STDIO_INLINE", "1");
+    @cInclude("printf.h");
+    });
+
 //pub var HEAP_START: usize = 0;
 //pub var HEAP_SIZE: usize = 0;
+extern fn makeUART() void;
+extern fn put(din: u8) void; 
+extern fn puts(din: [*]const u8) void;
+extern fn print(din: [*]u8) void; 
+extern fn read() u8; 
+// extern fn cputs(c: [*]const u8) void;
+
 
 pub var _text: usize = 0;
 pub var _etext: usize = 0;
@@ -40,12 +52,13 @@ export fn kinit() usize {
     trap.emptyfunc();
     const x = 0;
     // uart.uart_init();
-    const uart = uart_lib.MakeUART();
-    uart.puts("Uart Initd\n");
+    // const uart = uart_lib.MakeUART();
+    makeUART();
+    puts(c"Uart Initd\n");
     page.init();
-    uart.puts("Page Table Initd\n");
+    puts(c"Page Table Initd\n");
     kmem.init();
-    uart.puts("KMem functionality Initd\n");
+    puts(c"KMem functionality Initd\n");
 
     // page.printPageAllocations();
 
@@ -90,7 +103,8 @@ export fn kinit() usize {
     //Store it in mscratch
     cpu.mscratch_write(tf_ptr);
     timer.set_timer_ms(0, 1000);
-    uart.puts("Exiting kinit\n");
+    c.printf(c"Look at this!!!\n");
+    puts(c"Exiting kinit\n");
     return satp_val;
 }
 
@@ -119,15 +133,16 @@ export fn kelf2(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize) void {
 
 export fn kmain() void {
     //Reinit uart
-    const uart = uart_lib.MakeUART();
-    uart.puts("Entered Main\n");
+    // const uart = uart_lib.MakeUART();
+    puts(c"Entered Main\n");
     var ptr = page.zalloc(10);
-    m_test();
-    // var head_ptr = zlist.Node.new(10);
-    // var head_ptr = &head;
-    // uart.puts(string_lib.dword2hex(head_ptr.*.data));
-    // zlist.push(head_ptr, 15); 
-    // uart.puts(string_lib.dword2hex(head_ptr.*.data));
+    // c.cputs(c"check this out!\n");
+    var tmp: u8 = 'h';
+    var x: i32 = 0xb;
+    const hi = c"Happy";
+    // c.printf(c"Hello there! %s %d %c\n", hi, x, tmp);
+    c.printf(c"Address of _text: %x\n", _text);
+    
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
     // page.printPageAllocations();
 

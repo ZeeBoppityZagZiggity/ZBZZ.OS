@@ -1,4 +1,4 @@
-const uart_lib = @import("uart.zig").UART;
+// const uart_lib = @import("uart.zig").UART;
 const page = @import("page.zig");
 const assert = @import("std").debug.assert;
 

@@ -1,4 +1,4 @@
-const uart_lib = @import("uart.zig").UART;
+// const uart_lib = @import("uart.zig").UART;
 const string_lib = @import("string.zig").String;
 const cpu = @import("cpu.zig");
 const assert = @import("std").debug.assert;
@@ -76,7 +76,7 @@ pub fn init() void {
 }
 
 pub fn alloc(pages: usize) [*]u8 {
-    const uart = uart_lib.MakeUART();
+    // const uart = uart_lib.MakeUART();
     const num_pages = HEAP_SIZE / PAGE_SIZE;
     var i: usize = 0;
     var ptr = @intToPtr([*]Page, HEAP_START);
@@ -167,53 +167,53 @@ pub fn addr2hex(addr: *u8) [2]u8 {
     return hexstr;
 }
 
-pub fn printPageAllocations() void {
-    const uart = uart_lib.MakeUART();
-    var num_pages = HEAP_SIZE / PAGE_SIZE;
-    var head = @intToPtr(*Page, HEAP_START);
-    var tail = @intToPtr(*Page, HEAP_START + num_pages);
-    var alloc_head = ALLOC_START;
-    var alloc_tail = ALLOC_START + num_pages * PAGE_SIZE;
-    //Zee Bop Ziggity Zag, I'll put the developer of Zig in a bodybag :)
-    uart.puts("PAGE ALLOCATION TABLE: \nMETA: ");
-    uart.puts(string_lib.dword2hex(@ptrToInt(head)));
-    uart.puts(" -> ");
-    uart.puts(string_lib.dword2hex(@ptrToInt(tail)));
-    uart.puts("\nPHYS: ");
-    uart.puts(string_lib.dword2hex(alloc_head));
-    uart.puts(" -> ");
-    uart.puts(string_lib.dword2hex(alloc_tail));
-    uart.puts("\n");
-    var num: usize = 0;
-    while (@ptrToInt(head) < @ptrToInt(tail)) {
-        if (head.*.is_taken()) {
-            var start = @ptrToInt(head);
-            var memaddr = ALLOC_START + (start - HEAP_START) * PAGE_SIZE;
-            uart.puts(string_lib.dword2hex(memaddr));
-            uart.puts(" => ");
-            while (true) {
-                num += 1;
-                if (head.*.is_last()) {
-                    var end = @ptrToInt(head);
-                    var endmemaddr = ALLOC_START + ((end - HEAP_START) * PAGE_SIZE) + PAGE_SIZE - 1;
-                    uart.puts(string_lib.dword2hex(endmemaddr));
-                    uart.puts(": ");
-                    uart.puts(string_lib.byte2hex((@truncate(u8, end - start + 1))));
-                    uart.puts("\n");
-                    break;
-                }
-                head = @intToPtr(*Page, @ptrToInt(head) + 1);
-            }
-        }
-        head = @intToPtr(*Page, @ptrToInt(head) + 1);
-    }
-    uart.puts("Free pages: ");
-    uart.puts(string_lib.byte2hex(@truncate(u8, num_pages - num)));
-    uart.puts("\n");
-}
+// pub fn printPageAllocations() void {
+//     const uart = uart_lib.MakeUART();
+//     var num_pages = HEAP_SIZE / PAGE_SIZE;
+//     var head = @intToPtr(*Page, HEAP_START);
+//     var tail = @intToPtr(*Page, HEAP_START + num_pages);
+//     var alloc_head = ALLOC_START;
+//     var alloc_tail = ALLOC_START + num_pages * PAGE_SIZE;
+//     //Zee Bop Ziggity Zag, I'll put the developer of Zig in a bodybag :)
+//     uart.puts("PAGE ALLOCATION TABLE: \nMETA: ");
+//     uart.puts(string_lib.dword2hex(@ptrToInt(head)));
+//     uart.puts(" -> ");
+//     uart.puts(string_lib.dword2hex(@ptrToInt(tail)));
+//     uart.puts("\nPHYS: ");
+//     uart.puts(string_lib.dword2hex(alloc_head));
+//     uart.puts(" -> ");
+//     uart.puts(string_lib.dword2hex(alloc_tail));
+//     uart.puts("\n");
+//     var num: usize = 0;
+//     while (@ptrToInt(head) < @ptrToInt(tail)) {
+//         if (head.*.is_taken()) {
+//             var start = @ptrToInt(head);
+//             var memaddr = ALLOC_START + (start - HEAP_START) * PAGE_SIZE;
+//             uart.puts(string_lib.dword2hex(memaddr));
+//             uart.puts(" => ");
+//             while (true) {
+//                 num += 1;
+//                 if (head.*.is_last()) {
+//                     var end = @ptrToInt(head);
+//                     var endmemaddr = ALLOC_START + ((end - HEAP_START) * PAGE_SIZE) + PAGE_SIZE - 1;
+//                     uart.puts(string_lib.dword2hex(endmemaddr));
+//                     uart.puts(": ");
+//                     uart.puts(string_lib.byte2hex((@truncate(u8, end - start + 1))));
+//                     uart.puts("\n");
+//                     break;
+//                 }
+//                 head = @intToPtr(*Page, @ptrToInt(head) + 1);
+//             }
+//         }
+//         head = @intToPtr(*Page, @ptrToInt(head) + 1);
+//     }
+//     uart.puts("Free pages: ");
+//     uart.puts(string_lib.byte2hex(@truncate(u8, num_pages - num)));
+//     uart.puts("\n");
+// }
 
 pub fn printPageContents(addr: *u8) void {
-    const uart = uart_lib.MakeUART();
+    // const uart = uart_lib.MakeUART();
     var base_address = @ptrToInt(addr);
     var i: usize = 0;
     while (i < PAGE_SIZE) {
@@ -231,7 +231,7 @@ pub fn printPageContents(addr: *u8) void {
 }
 
 pub fn printPageTable() void {
-    const uart = uart_lib.MakeUART();
+    // const uart = uart_lib.MakeUART();
     const num_pages = HEAP_SIZE / PAGE_SIZE;
 
     var i: usize = 0;
@@ -305,9 +305,9 @@ pub const Table = packed struct {
 };
 
 pub fn map(root: *Table, vaddr: usize, paddr: usize, bits: usize, level: usize) void {
-    const uart = uart_lib.MakeUART();
+    // const uart = uart_lib.MakeUART();
     if (bits & 0xe == 0) {
-        uart.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.\n");
+        // uart.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.\n");
         asm volatile ("j .");
     }
     var vpn = [3]usize{ ((vaddr >> 12) & 0x1ff), ((vaddr >> 21) & 0x1ff), ((vaddr >> 30) & 0x1ff) };
@@ -374,7 +374,7 @@ pub fn unmap(root: *Table) void {
 }
 
 pub fn virt_to_phys(root: *Table, vaddr: usize) usize {
-    const uart = uart_lib.MakeUART();
+    // const uart = uart_lib.MakeUART();
     var vpn = [3]usize{
         (vaddr >> 12) & 0x1ff,
         (vaddr >> 21) & 0x1ff,
@@ -386,7 +386,7 @@ pub fn virt_to_phys(root: *Table, vaddr: usize) usize {
     var arr = [3]u8{ 2, 1, 0 };
     for (arr) |i| {
         if (v.*.is_invalid()) {
-            uart.puts(":(");
+            // uart.puts(":(");
             break;
         } else if (v.*.is_leaf()) {
             // var off_mask: usize = (1 << (12 + i * 9)) - 1;
