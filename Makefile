@@ -8,6 +8,8 @@ CIC=-Iobjs/
 CFLAGS=-Wall -O0 -g -T$(LDS) -mabi=lp64d -march=rv64gc
 CFLAGS+=$(CIC)
 CFLAGS+=-ffreestanding -nostartfiles -nostdinc -static -mcmodel=medany
+CFLAGS_PRINTF=$(CIC)
+CFLAGS_PRINTF+=-ffreestanding -nostartfiles -static -mcmodel=medany
 ASM=$(wildcard src/asm/*.S)
 ALL_ZIGS=$(wildcard src/*.zig)
 ZIGS=src/main.zig
@@ -68,7 +70,7 @@ $(UART_O): $(ALL_ZIGS) Makefile
 	$(ZIG) build-lib $(UART_OPTS)
 
 $(PRINTF_O): $(PRINTF_C) $(UART_S) Makefile 
-	$(CC) $(CIC) -o $(PRINTF_O) -c $(PRINTF_C)
+	$(CC) $(CFLAGS_PRINTF) -o $(PRINTF_O) -c $(PRINTF_C)
 
 upload: $(OUT_BIN)
 	./kflash.py -p /dev/ttyUSB0 -B maixduino $(OUT_BIN)

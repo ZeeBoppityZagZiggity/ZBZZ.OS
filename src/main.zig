@@ -137,14 +137,17 @@ export fn kmain() void {
     puts(c"Entered Main\n");
     var ptr = page.zalloc(10);
     // c.cputs(c"check this out!\n");
-    var tmp: u8 = 'h';
-    var x: i32 = 0xb;
-    const hi = c"Happy";
-    // c.printf(c"Hello there! %s %d %c\n", hi, x, tmp);
-    c.printf(c"Address of _text: %x\n", _text);
+    var a: i32 = 14;
+    var b: i32 = 18; 
+    c.printf(c"%d + %d = %05d\n", a, b, a + b);
+    var str1 = c"Hello";
+    var str2 = c"World";
+    c.printf(c"%s, World!\n", str1);
+    c.printf(c"Address of str1: 0x%08x\n", @ptrToInt(str1));
+    // c.printf(c"Address of _text: %016x\n", _text);
     
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
-    // page.printPageAllocations();
+    page.printPageAllocations();
 
     // var mystr = string_lib.String("Hello as well!\n");
     // uart.print(mystr.z_str());

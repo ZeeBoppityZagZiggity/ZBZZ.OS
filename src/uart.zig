@@ -59,12 +59,14 @@ const UART = struct {
         // for (din) |value| {
         //     put(value);
         // }
-        var base = @ptrToInt(din); //I'm not sure why but it won't work without this
+        // var base = @ptrToInt(din); //I'm not sure why but it won't work without this
+        var d = din[0];
         var i: usize = 0;
         // var ptr = @intToPtr(*u8, base + i);
-        while (din[i] != 0) {
-            put(din[i]);
+        while (d != 0) {
+            put(d);
             i += 1;
+            d = din[i];
             // ptr = @intToPtr(*u8, base + i);
         }
         // var i: usize = 0;

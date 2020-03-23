@@ -3,6 +3,11 @@ const string_lib = @import("string.zig").String;
 const cpu = @import("cpu.zig");
 const assert = @import("std").debug.assert;
 
+const c = @cImport({
+    @cDefine("_NO_CRT_STDIO_INLINE", "1");
+    @cInclude("printf.h");
+    });
+
 pub var HEAP_START: usize = 0;
 pub var HEAP_SIZE: usize = 0;
 // extern "C" const HEAP_START: c_ulong;
@@ -167,6 +172,21 @@ pub fn addr2hex(addr: *u8) [2]u8 {
     return hexstr;
 }
 
+pub fn printPageAllocations() void {
+    var num_pages = HEAP_SIZE / PAGE_SIZE;
+    var head = @intToPtr(*Page, HEAP_START);
+    var tail = @intToPtr(*Page, HEAP_START + num_pages); 
+    var alloc_head = ALLOC_START;
+    var alloc_tail = ALLOC_START + num_pages * PAGE_SIZE;
+    c.printf(c"PAGE ALLOCATION TABLE: \nMETA: %08x -> %08x\n", @ptrToInt(head), @ptrToInt(tail));
+    c.printf(c"PHYS: %08x -> %08x\n", alloc_head, alloc_tail);
+    var num: usize = 0; 
+    while(@ptrToInt(head) < @ptrToInt(tail)) {
+        if (head.*.is_taken()) {
+            
+        }
+    }
+}
 // pub fn printPageAllocations() void {
 //     const uart = uart_lib.MakeUART();
 //     var num_pages = HEAP_SIZE / PAGE_SIZE;
