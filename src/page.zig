@@ -183,9 +183,22 @@ pub fn printPageAllocations() void {
     var num: usize = 0; 
     while(@ptrToInt(head) < @ptrToInt(tail)) {
         if (head.*.is_taken()) {
-            
+            var start = @ptrToInt(head);
+            var memaddr = ALLOC_START + (start - HEAP_START) * PAGE_SIZE;
+            while (true) {
+                num += 1; 
+                if (head.*.is_last()) {
+                    var end = @ptrToInt(head); 
+                    var endmemaddr = ALLOC_START + ((end - HEAP_START) * PAGE_SIZE) + PAGE_SIZE - 1;
+                    c.printf(c"%08x => %08x: %02d\n", memaddr, endmemaddr, (end - start + 1));
+                    break;
+                }
+                head = @intToPtr(*Page, @ptrToInt(head) + 1);
+            }
         }
+        head = @intToPtr(*Page, @ptrToInt(head) + 1);
     }
+    c.printf(c"Free Pages: %d\n", num_pages - num); 
 }
 // pub fn printPageAllocations() void {
 //     const uart = uart_lib.MakeUART();
