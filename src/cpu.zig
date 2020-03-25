@@ -32,6 +32,11 @@ pub fn satp_write(val: usize) void {
     );
 }
 
+pub fn satp_read() usize {
+    return asm volatile ("csrr %[ret], satp"
+        : [ret] "={x10}" (-> usize) : :);
+}
+
 pub const SatpMode = enum(usize) {
     Off = 0,
     Sv39 = 8,
@@ -39,7 +44,7 @@ pub const SatpMode = enum(usize) {
 };
 
 pub fn build_satp(mode: SatpMode, asid: usize, addr: usize) usize {
-    return ((@enumToInt(mode) << 60) | ((asid & 0xffff) << 44) | ((addr >> 12) & 0xffffffffff));
+    return ((@enumToInt(mode) << 60) | ((asid & 0xffff) << 44) | ((addr >> 12) & 0xfffffffffff));
 }
 
 pub fn satp_fence_asid(asid: usize) void {

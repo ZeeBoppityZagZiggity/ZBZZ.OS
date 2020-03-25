@@ -341,6 +341,7 @@ pub fn map(root: *Table, vaddr: usize, paddr: usize, bits: usize, level: usize) 
     // const uart = uart_lib.MakeUART();
     if (bits & 0xe == 0) {
         // uart.puts("Make sure that Read, Write, or Execute has been provided, you absolute buffoon.\n");
+        c.printf(c"You fool! You've not provided bits!\n");
         asm volatile ("j .");
     }
     var vpn = [3]usize{ ((vaddr >> 12) & 0x1ff), ((vaddr >> 21) & 0x1ff), ((vaddr >> 30) & 0x1ff) };
@@ -353,12 +354,13 @@ pub fn map(root: *Table, vaddr: usize, paddr: usize, bits: usize, level: usize) 
     var stupidTmpDumbZig: usize = 0x3ff;
     var arr = [3]u8{ 2, 1, 0 };
     for (arr) |i| {
+        // c.printf(c"%08x\n", v.*.get_entry());
         if (i == level) {
             break;
         }
         if (v.*.is_invalid()) {
             var page: [*]u8 = zalloc(1);
-
+            // c.printf(c"new table...\n");
             v.*.set_entry((@ptrToInt(page) >> 2) | @enumToInt(EntryBits.Valid));
         }
 
@@ -373,6 +375,7 @@ pub fn map(root: *Table, vaddr: usize, paddr: usize, bits: usize, level: usize) 
     // uart.puts(string_lib.dword2hex(entry));
     // uart.puts("\n");
     v.*.set_entry(entry);
+    // c.printf(c"Entry: %08x at Address: %08x\n", v.*.get_entry(), @ptrToInt(v));
 }
 
 pub fn unmap(root: *Table) void {
@@ -413,13 +416,17 @@ pub fn virt_to_phys(root: *Table, vaddr: usize) usize {
         (vaddr >> 21) & 0x1ff,
         (vaddr >> 30) & 0x1ff,
     };
-
+    var stupidTmpDumbZig: usize = 0x3ff;
+    // c.printf(c"starting virt_to_phys\n");
+    // c.printf(c"vpn[2] = %x, vpn[1] = %x, vpn[0] = %x\n", vpn[2], vpn[1], vpn[0]); 
     var v = &root.*.entries[vpn[2]];
     // var i: usize = 1;
     var arr = [3]u8{ 2, 1, 0 };
     for (arr) |i| {
+        // c.printf(c"v[%d] = %08x\n", i, v.*.get_entry());
         if (v.*.is_invalid()) {
             // uart.puts(":(");
+            // c.printf(c"Invalid :(\n");
             break;
         } else if (v.*.is_leaf()) {
             // var off_mask: usize = (1 << (12 + i * 9)) - 1;
@@ -433,10 +440,14 @@ pub fn virt_to_phys(root: *Table, vaddr: usize) usize {
             var addr: usize = (v.*.get_entry() << 2) & ~off_mask;
             return (addr | vaddr_pgoff);
         }
-        var stupidTmpDumbZig: usize = 0x3ff;
-        var entry = @intToPtr(*Entry, ((v.get_entry() & ~stupidTmpDumbZig) << 2));
-
-        v = @intToPtr(*Entry, (@ptrToInt(entry) + vpn[i - 1]));
+        
+        // var entry = @intToPtr(*Entry, ((v.*.get_entry() & ~stupidTmpDumbZig) << 2));
+        // var entry = ((v.*.get_entry() & ~stupidTmpDumbZig) << 2);
+        // c.printf(c"entry[%d] = %08x\n", i, entry);
+        var nextTable = @intToPtr(*Table, ((v.*.get_entry() & ~stupidTmpDumbZig) << 2)); 
+        // v = @intToPtr(*Entry, (@ptrToInt(entry) + vpn[i - 1]));
+        // v = @intToPtr(*Entry, entry + vpn[i-1]);
+        v = &nextTable.*.entries[vpn[i-1]];
     }
     return 0;
 }

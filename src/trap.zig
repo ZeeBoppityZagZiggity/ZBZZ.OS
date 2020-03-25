@@ -4,13 +4,21 @@ const string_lib = @import("string.zig").String;
 const page = @import("page.zig");
 const kmem = @import("kmem.zig");
 const timer = @import("timer.zig");
+const proc = @import("process.zig");
+const sched = @import("sched.zig");
 // const uart_base_addr: usize = 0x10000000;
+
+const c = @cImport({
+    @cDefine("_NO_CRT_STDIO_INLINE", "1");
+    @cInclude("printf.h");
+    });
 
 extern fn makeUART() void;
 extern fn put(din: u8) void; 
 extern fn puts(din: [*]const u8) void;
 extern fn print(din: [*]u8) void; 
 extern fn read() u8; 
+extern fn switch_to_user(frame: usize, mepc: usize, satp: usize) noreturn; 
 
 export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: usize, frame: usize) usize {
     // const uart = uart_lib.MakeUART();
@@ -24,15 +32,17 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
         // uart.puts("Interrupt!\n");
         switch (cause_num) {
             0 => { //User software interrupt
-                puts(c"User software interrupt\n");
+                c.printf(c"User software interrupt\n");
             },
             1 => {
-                puts(c"Supervisor Software Intterupt\n");
+                c.printf(c"Supervisor Software Intterupt\n");
             },
             7 => {
-                puts(c"Timer Interrupt\n");
+                c.printf(c"Timer Interrupt\n");
+                var s = sched.schedule(); 
                 timer.set_timer_ms(0, 1000);
-                mepc = epc;
+                switch_to_user(s.frame, s.mepc, s.satp);
+                // mepc = epc;
             },
             11 => { //Machine External Interrupt
                 // Get id from PLIC
@@ -60,28 +70,29 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 mepc = epc;
             },
             else => {
-                puts(c"Non-external interrupt\n");
+                c.printf(c"Non-external interrupt\n");
             },
         }
     } else {
         switch (cause_num) {
             0 => {
-                puts(c"Instruction address misaligned!\n");
+                c.printf(c"Instruction address misaligned!\n");
             },
             1 => {
-                puts(c"Instruction Access fault\n");
+                c.printf(c"Instruction Access fault\n");
             },
             2 => {
-                puts(c"Illegal Instruction\n");
+                c.printf(c"Illegal Instruction\n");
+                asm volatile ("j .");
             },
             3 => {
-                puts(c"Breakpoint\n");
+                c.printf(c"Breakpoint\n");
             },
             4 => {
-                puts(c"Load Address Misaligned\n");
+                c.printf(c"Load Address Misaligned\n");
             },
             5 => {
-                puts(c"Load Access Fault\n");
+                c.printf(c"Load Access Fault\n");
                 // const epcstr = string_lib.dword2hex(epc);
                 // puts(epcstr);
                 // puts(" => ");
@@ -90,49 +101,50 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 // asm volatile ("j .");
             },
             6 => {
-                puts(c"Store/AMO address misaligned\n");
+                c.printf(c"Store/AMO address misaligned\n");
             },
             7 => {
-                puts(c"Store/AMO Access Fault\n");
+                c.printf(c"Store/AMO Access Fault\n");
                 // asm volatile("j .");
             },
             8 => {
-                puts(c"Ecall from U-mode\n");
+                c.printf(c"Ecall from U-mode\n");
             },
             9 => {
-                puts(c"Ecall from S-mode\n");
+                c.printf(c"Ecall from S-mode\n");
             },
             10 => {
-                puts(c"( ͡° ͜ʖ ͡°)\n");
+                c.printf(c"( ͡° ͜ʖ ͡°)\n");
             },
             11 => {
-                puts(c"ecall from m-mode\n");
+                c.printf(c"ecall from m-mode\n");
                 asm volatile ("j .");
             },
             //Page Faults
             12 => {
                 // Instruction page fault
-                puts(c"Instruction page fault CPU 0 (this is hardcoded btw)\n");
+                c.printf(c"Instruction page fault CPU 0 (this is hardcoded btw)\n");
+                c.printf(c"Virt addr: %x\nPhys addr: %x\n", epc, page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc));
                 // const epcstr = string_lib.dword2hex(epc);
                 // uart.puts(epcstr);
                 // uart.puts(" => ");
                 // var phys = page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc);
                 // uart.puts(string_lib.dword2hex(phys));
-                // asm volatile ("j .");
+                asm volatile ("j .");
                 // mepc += 4;
             },
             13 => {
                 //Load page fault
-                puts(c"Load Page Fault CPU 0 (this is hardcoded btw)\n");
+                c.printf(c"Load Page Fault CPU 0 (this is hardcoded btw)\n");
                 // mepc += 4;
             },
             15 => {
                 //Store page fault
-                puts(c"Store Page Fault CPU 0 (this is hardcoded btw)\n");
+                c.printf(c"Store Page Fault CPU 0 (this is hardcoded btw)\n");
                 // mepc += 4;
             },
             else => {
-                puts(c"other\n");
+                c.printf(c"other\n");
             },
         }
     }
