@@ -8,14 +8,14 @@ var initd = false;
 
 /// UART Struct
 /// @functions MakeUART put read
-pub const UART = struct {
+const UART = struct {
     /// address to use for DMA UART interface
     uart_base_addr: usize,
-
+};
     /// init
     /// @brief Initializes a UART struct on the passed memory address
     /// @param base_addr the location of the UART
-    pub fn MakeUART() UART {
+    export fn makeUART() void {
         if (initd == false) {
             const base_ptr = @intToPtr(*volatile u8, base_addr);
 
@@ -41,23 +41,33 @@ pub const UART = struct {
             lcr_ptr.* = 0b11;
         }
         initd = true;
-        return UART{ .uart_base_addr = base_addr };
+        // return UART{ .uart_base_addr = base_addr };
     }
 
     /// put
     /// @brief writes u8 data through the UART
     /// @param din unsigned byte data input to write
-    pub fn put(self: UART, din: u8) void {
-        const base_ptr = @intToPtr(*volatile u8, self.uart_base_addr);
+    export fn put(din: u8) void {
+        const base_ptr = @intToPtr(*volatile u8, base_addr);
         base_ptr.* = din;
     }
 
     /// puts
     /// @brief writes an array of u8 data through the UART
     /// @param din unsigned byte array of input to write
-    pub fn puts(self: UART, din: []const u8) void {
-        for (din) |value| {
-            self.put(value);
+    export fn puts(din: [*]u8) void {
+        // for (din) |value| {
+        //     put(value);
+        // }
+        // var base = @ptrToInt(din); //I'm not sure why but it won't work without this
+        var d = din[0];
+        var i: usize = 0;
+        // var ptr = @intToPtr(*u8, base + i);
+        while (d != 0) {
+            put(d);
+            i += 1;
+            d = din[i];
+            // ptr = @intToPtr(*u8, base + i);
         }
         // var i: usize = 0;
         // while(true) {
@@ -71,12 +81,12 @@ pub const UART = struct {
         // }
     }
 
-    pub fn print(self: UART, din: [*]u8) void {
-        var base = @ptrToInt(din);
+    export fn print(din: [*]u8) void {
+        // var base = @ptrToInt(din);
         var i: usize = 0;
         // var ptr = @intToPtr(*u8, base + i);
         while (din[i] != 0) {
-            self.put(din[i]);
+            put(din[i]);
             i += 1;
             // ptr = @intToPtr(*u8, base + i);
         }
@@ -85,14 +95,14 @@ pub const UART = struct {
     /// read
     /// @brief returns content written to the UART or a null value
     /// @return a u8 piece of data read off the UART or NULL
-    pub fn read(self: UART) ?u8 {
-        const base_ptr = @intToPtr(*volatile u8, self.uart_base_addr);
-        const dr_ptr = @intToPtr(*volatile u8, self.uart_base_addr + 5);
+    export fn read() u8 {
+        const base_ptr = @intToPtr(*volatile u8, base_addr);
+        const dr_ptr = @intToPtr(*volatile u8, base_addr + 5);
         var dr: u8 = dr_ptr.* & 0b1;
-        var rx: ?u8 = null;
+        var rx: u8 = undefined;
         if (dr == 1) {
             rx = base_ptr.*;
         }
         return rx;
     }
-};
+// };

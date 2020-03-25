@@ -1,12 +1,27 @@
-const uart_lib = @import("uart.zig").UART;
+// const uart_lib = @import("uart.zig").UART;
 const plic = @import("plic.zig");
 const string_lib = @import("string.zig").String;
 const page = @import("page.zig");
 const kmem = @import("kmem.zig");
+const timer = @import("timer.zig");
+const proc = @import("process.zig");
+const sched = @import("sched.zig");
 // const uart_base_addr: usize = 0x10000000;
 
+const c = @cImport({
+    @cDefine("_NO_CRT_STDIO_INLINE", "1");
+    @cInclude("printf.h");
+    });
+
+extern fn makeUART() void;
+extern fn put(din: u8) void; 
+extern fn puts(din: [*]const u8) void;
+extern fn print(din: [*]u8) void; 
+extern fn read() u8; 
+extern fn switch_to_user(frame: usize, mepc: usize, satp: usize) noreturn; 
+
 export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: usize, frame: usize) usize {
-    const uart = uart_lib.MakeUART();
+    // const uart = uart_lib.MakeUART();
     // uart.puts("Trap has been triggered!\n");
     //Check if it is an interrupt or not
     var is_async: bool = (((mcause >> 63) & 0b1) == 1);
@@ -17,28 +32,35 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
         // uart.puts("Interrupt!\n");
         switch (cause_num) {
             0 => { //User software interrupt
-                uart.puts("User software interrupt\n");
+                c.printf(c"User software interrupt\n");
             },
             1 => {
-                uart.puts("Supervisor Software Intterupt\n");
+                c.printf(c"Supervisor Software Intterupt\n");
+            },
+            7 => {
+                c.printf(c"Timer Interrupt\n");
+                var s = sched.schedule(); 
+                timer.set_timer_ms(0, 1000);
+                switch_to_user(s.frame, s.mepc, s.satp);
+                // mepc = epc;
             },
             11 => { //Machine External Interrupt
                 // Get id from PLIC
                 const claim_id: u32 = plic.claim();
                 switch (claim_id) {
                     10 => { //UART
-                        var rx: ?u8 = uart.read();
-                        switch (rx.?) {
+                        var rx: u8 = read();
+                        switch (rx) {
                             8, 127 => {
-                                uart.put(8);
-                                uart.put(' ');
-                                uart.put(8);
+                                put(8);
+                                put(' ');
+                                put(8);
                             },
                             10, 13 => {
-                                uart.puts("\r\n");
+                                puts(c"\r\n");
                             },
                             else => {
-                                uart.put(rx.?);
+                                put(rx);
                             },
                         }
                     },
@@ -48,79 +70,81 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 mepc = epc;
             },
             else => {
-                uart.puts("Non-external interrupt\n");
+                c.printf(c"Non-external interrupt\n");
             },
         }
     } else {
         switch (cause_num) {
             0 => {
-                uart.puts("Instruction address misaligned!\n");
+                c.printf(c"Instruction address misaligned!\n");
             },
             1 => {
-                uart.puts("Instruction Access fault\n");
+                c.printf(c"Instruction Access fault\n");
             },
             2 => {
-                uart.puts("Illegal Instruction\n");
-            },
-            3 => {
-                uart.puts("Breakpoint\n");
-            },
-            4 => {
-                uart.puts("Load Address Misaligned\n");
-            },
-            5 => {
-                uart.puts("Load Access Fault\n");
-                const epcstr = string_lib.dword2hex(epc);
-                uart.puts(epcstr);
-                uart.puts(" => ");
-                var phys = page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc);
-                uart.puts(string_lib.dword2hex(phys));
+                c.printf(c"Illegal Instruction\n");
                 asm volatile ("j .");
             },
+            3 => {
+                c.printf(c"Breakpoint\n");
+            },
+            4 => {
+                c.printf(c"Load Address Misaligned\n");
+            },
+            5 => {
+                c.printf(c"Load Access Fault\n");
+                // const epcstr = string_lib.dword2hex(epc);
+                // puts(epcstr);
+                // puts(" => ");
+                // var phys = page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc);
+                // puts(string_lib.dword2hex(phys));
+                // asm volatile ("j .");
+            },
             6 => {
-                uart.puts("Store/AMO address misaligned\n");
+                c.printf(c"Store/AMO address misaligned\n");
             },
             7 => {
-                uart.puts("Store/AMO Access Fault\n");
+                c.printf(c"Store/AMO Access Fault\n");
                 // asm volatile("j .");
             },
             8 => {
-                uart.puts("Ecall from U-mode\n");
+                c.printf(c"Ecall from U-mode\n");
             },
             9 => {
-                uart.puts("Ecall from S-mode\n");
+                c.printf(c"Ecall from S-mode\n");
             },
             10 => {
-                uart.puts("( ͡° ͜ʖ ͡°)\n");
+                c.printf(c"( ͡° ͜ʖ ͡°)\n");
             },
             11 => {
-                uart.puts("ecall from m-mode\n");
+                c.printf(c"ecall from m-mode\n");
                 asm volatile ("j .");
             },
             //Page Faults
             12 => {
                 // Instruction page fault
-                uart.puts("Instruction page fault CPU 0 (this is hardcoded btw)\n");
-                const epcstr = string_lib.dword2hex(epc);
-                uart.puts(epcstr);
-                uart.puts(" => ");
-                var phys = page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc);
-                uart.puts(string_lib.dword2hex(phys));
+                c.printf(c"Instruction page fault CPU 0 (this is hardcoded btw)\n");
+                c.printf(c"Virt addr: %x\nPhys addr: %x\n", epc, page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc));
+                // const epcstr = string_lib.dword2hex(epc);
+                // uart.puts(epcstr);
+                // uart.puts(" => ");
+                // var phys = page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc);
+                // uart.puts(string_lib.dword2hex(phys));
                 asm volatile ("j .");
                 // mepc += 4;
             },
             13 => {
                 //Load page fault
-                uart.puts("Load Page Fault CPU 0 (this is hardcoded btw)\n");
+                c.printf(c"Load Page Fault CPU 0 (this is hardcoded btw)\n");
                 // mepc += 4;
             },
             15 => {
                 //Store page fault
-                uart.puts("Store Page Fault CPU 0 (this is hardcoded btw)\n");
+                c.printf(c"Store Page Fault CPU 0 (this is hardcoded btw)\n");
                 // mepc += 4;
             },
             else => {
-                uart.puts("other\n");
+                c.printf(c"other\n");
             },
         }
     }
@@ -133,7 +157,7 @@ pub fn emptyfunc() void {}
 
 /// TrapFrame
 /// @brief trap frame for storing context during trap handling
-pub const TrapFrame = struct {
+pub const TrapFrame = packed struct {
     regs: [32]usize, //registers
     fregs: [32]usize, //fregisters
     satp: usize, //SATP ?

@@ -1,4 +1,4 @@
-const uart_lib = @import("uart.zig").UART;
+// const uart_lib = @import("uart.zig").UART;
 const string_lib = @import("string.zig").String;
 const trap = @import("trap.zig");
 const cpu = @import("cpu.zig");
@@ -6,10 +6,28 @@ const plic = @import("plic.zig");
 const fmt = @import("std").fmt;
 const page = @import("page.zig");
 const kmem = @import("kmem.zig");
-// const uart_base_addr: usize = 0x10000000;
+const timer = @import("timer.zig");
+const proc = @import("process.zig");
+const sched = @import("sched.zig");
+// const LinkedList = @import("linkedlist.zig").LinkedList;
+const uart_base_addr: usize = 0x10000000;
+
+const c = @cImport({
+    @cDefine("_NO_CRT_STDIO_INLINE", "1");
+    @cInclude("printf.h");
+    });
 
 //pub var HEAP_START: usize = 0;
 //pub var HEAP_SIZE: usize = 0;
+extern fn makeUART() void;
+extern fn put(din: u8) void; 
+extern fn puts(din: [*]const u8) void;
+extern fn print(din: [*]u8) void; 
+extern fn read() u8; 
+
+extern fn switch_to_user(frame: usize, mepc: usize, satp: usize) noreturn; 
+// extern fn cputs(c: [*]const u8) void;
+
 
 pub var _text: usize = 0;
 pub var _etext: usize = 0;
@@ -37,12 +55,15 @@ export fn kinit() usize {
     trap.emptyfunc();
     const x = 0;
     // uart.uart_init();
-    const uart = uart_lib.MakeUART();
-    uart.puts("Uart Initd\n");
+    // const uart = uart_lib.MakeUART();
+    makeUART();
+    puts(c"Uart Initd\n");
     page.init();
-    uart.puts("Page Table Initd\n");
+    puts(c"Page Table Initd\n");
     kmem.init();
-    uart.puts("KMem functionality Initd\n");
+    puts(c"KMem functionality Initd\n");
+    var addr = proc.init();
+    // c.printf(c"PROC ADDR: %x\n", addr);
 
     // page.printPageAllocations();
 
@@ -50,6 +71,10 @@ export fn kinit() usize {
     var root_u: usize = @ptrToInt(root_ptr);
     var kheap_head: *u8 = @intToPtr(*u8, @ptrToInt(kmem.get_head()));
     var total_pages: usize = kmem.get_num_allocations();
+
+    // Map UART
+    page.map(root_ptr, uart_base_addr, uart_base_addr, @enumToInt(page.EntryBits.ReadWrite), 0);
+    // c.printf(c"uart: %08x => %08x\n", uart_base_addr, page.virt_to_phys(root_ptr, uart_base_addr));
 
     id_map_range(root_ptr, @ptrToInt(kheap_head), @ptrToInt(kheap_head) + total_pages * 4096, @enumToInt(page.EntryBits.ReadWrite));
     // Map Heap descriptors
@@ -65,12 +90,14 @@ export fn kinit() usize {
     id_map_range(root_ptr, _bss, _ebss, @enumToInt(page.EntryBits.ReadWrite));
     //Map kernel stack
     id_map_range(root_ptr, _kernel_stack, _ekernel_stack, @enumToInt(page.EntryBits.ReadWrite));
-    //Map UART
-    // id_map_range(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite));
-    page.map(root_ptr, 0x10000000, 0x10000000, @enumToInt(page.EntryBits.ReadWrite), 0);
+    
 
-    var root_ppn: usize = root_u >> 12;
-    var satp_val: usize = (8 << 60) | root_ppn;
+    //Map CLINT
+    id_map_range(root_ptr, timer.clint_base, timer.clint_end, @enumToInt(page.EntryBits.ReadWrite));
+
+
+    // var root_ppn: usize = root_u >> 12;
+    // var satp_val: usize = (8 << 60) | root_ppn;
     // cpu.satp_write(satp_val);
 
     // Set up the PLIC
@@ -79,12 +106,22 @@ export fn kinit() usize {
     plic.set_threshold(0);
 
     //Create Trap Frame Pointer
-    const tf = @ptrCast(*const u8, &trap.KERNEL_TRAP_FRAME);
-    const tf_ptr = @ptrToInt(tf);
-    //Store it in mscratch
-    cpu.mscratch_write(tf_ptr);
-    uart.puts("Exiting kinit\n");
-    return satp_val;
+    // const tf = @ptrCast(*const u8, &trap.KERNEL_TRAP_FRAME);
+    // const tf_ptr = @ptrToInt(tf);
+    // //Store it in mscratch
+    // cpu.mscratch_write(tf_ptr);
+    // timer.set_timer_ms(0, 1000);
+
+    var s = sched.schedule();
+    c.printf(c"Frame addr: %08x\nMEPC: %08x\nSATP: %08x%08x\n", s.frame, s.mepc, s.satp >> 32, s.satp);
+    var root_addr = (s.satp & 0xfffffffffff) << 12;
+    c.printf(c"switching to user\n");
+    switch_to_user(s.frame, s.mepc, s.satp);
+    
+    // c.printf(c"Oh no!!!!!\n");
+    // c.printf(c"Exiting kinit\n");
+    // return addr;
+    // return satp_val;
 }
 
 //This stupid function exists because Zig's compiler has a (known) bug
@@ -112,18 +149,39 @@ export fn kelf2(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize) void {
 
 export fn kmain() void {
     //Reinit uart
-    const uart = uart_lib.MakeUART();
-    uart.puts("Entered Main\n");
+    // const uart = uart_lib.MakeUART();
+    puts(c"Entered Main\n");
     var ptr = page.zalloc(10);
+    // c.cputs(c"check this out!\n");
+    var a: i32 = 14;
+    var b: i32 = 18; 
+    c.printf(c"%d + %d = %05d\n", a, b, a + b);
+    var str1 = c"Hello";
+    var str2 = c"World";
+    c.printf(c"%s, World!\n", str1);
+    c.printf(c"Address of str1: 0x%08x\n", @ptrToInt(str1));
+    // c.printf(c"Address of _text: %016x\n", _text);
+    
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
-    // page.printPageAllocations();
+    page.printPageAllocations();
+    c.printf(c"Kernel stack: %08x -> %08x\n", _kernel_stack, _ekernel_stack);
+    c.printf(c"TRAP FRAME STACK PTR: %08x\n", trap.KERNEL_TRAP_FRAME.trap_stack);
 
-    // var mystr = string_lib.String("Hello as well!\n");
-    // uart.print(mystr.z_str());
-    // mystr.free();
+    // var l = LinkedList(usize) {
+    //     .first = null, 
+    //     .last = null,
+    //     .len = 0,
+    // };
 
-    // var c: usize = 0x80000000;
-    // var
+    // l.push_front(16); 
+    // c.printf(c"%d\n", l.first.?.*.data);
+    // l.push_front(33); 
+    // c.printf(c"%d -> %d\n", l.first.?.*.data, l.first.?.*.next.?.*.data);
+    // var l1 = l.pop_front();
+    // var l2 = l.pop_front();
+    // c.printf(c"%d -> %d\n", l1, l2);
 
-    while (true) {}
+
+
+    // while (true) {}
 }

@@ -64,8 +64,7 @@ contpoint:
 # Go here after kinit to enable interrupts and go to kmain
 post_init:
 	# li 		t0, 0x09a0
-	la 		ra, infloop
-	li 		t0, (1 << 11) | (1 << 8) | (1 << 7) | (1 << 5)
+	li 		t0, (1 << 7) | (1 << 5)
 	csrw 	mstatus, t0 
 	la  	t2, m_trap_vector 
 	csrw	mtvec, t2 
@@ -77,21 +76,20 @@ post_init:
 	csrw 	mie, t3
 	# la 		ra, infloop 
 	# mret
-	li		t0, (1 << 8) | (1 << 5)
-	csrw 	sstatus, t0 
+	# li		t0, (1 << 8) | (1 << 5)
+	# csrw 	sstatus, t0 
 
-	la 		t1, kmain 
-	csrw 	sepc, t1 
+	# la 		t1, kmain 
+	# csrw 	sepc, t1 
+
+	csrw 	mepc, a0
 	li 		t2, (1 << 1) | (1 << 5) | (1 << 9) 
-	csrw	mideleg, t2 
-	csrw 	sie, t2 
+	# csrw	mideleg, t2 
+	# csrw 	sie, t2 
 	
-
-	la 		t3, m_trap_vector 
-	csrw 	stvec, t3 
-	csrw 	satp, a0
-	sfence.vma 
-	sret
+	# csrw 	satp, a0
+	la  ra, infloop
+	mret
 
 
 infloop:
