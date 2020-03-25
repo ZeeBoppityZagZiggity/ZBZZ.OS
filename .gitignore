@@ -4,3 +4,4 @@ objs/*
 *.bin
 *.o
 .DS_Store
+zig-cache
