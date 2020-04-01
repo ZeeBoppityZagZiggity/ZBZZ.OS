@@ -1,3 +1,15 @@
+
+pub var _text: usize = 0;
+pub var _etext: usize = 0;
+pub var _rodata: usize = 0;
+pub var _erodata: usize = 0;
+pub var _data: usize = 0;
+pub var _edata: usize = 0;
+pub var _bss: usize = 0;
+pub var _ebss: usize = 0;
+pub var _kernel_stack: usize = 0;
+pub var _ekernel_stack: usize = 0;
+
 /// mscratch_write
 /// @brief Writes a value of type usize into the mscratch register
 /// @param val Value to write into mscratch
@@ -34,6 +46,11 @@ pub fn satp_write(val: usize) void {
 
 pub fn satp_read() usize {
     return asm volatile ("csrr %[ret], satp"
+        : [ret] "={x10}" (-> usize) : :);
+}
+
+pub fn misa_read() usize {
+    return asm volatile ("csrr %[ret], misa"
         : [ret] "={x10}" (-> usize) : :);
 }
 

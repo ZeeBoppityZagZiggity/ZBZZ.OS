@@ -26,7 +26,7 @@
 m_trap_vector: 
 	# Put t6 in mscratch to store later. 
 	# We need it right now to save the others.
-	
+	# j .
 	csrrw t6, mscratch, t6 
 	# Save the other registers. 
 	.set 	i, 1
@@ -50,7 +50,11 @@ m_trap_vector:
 	csrr 	a4, mstatus 
 	mv 		a5, t5 
 	# load trap stack pointer
-	ld 		sp, 520(a5) 
+	# ld 		sp, 520(a5) 
+	# la 		t0, _sp0
+	# ld 		sp, 0(t0)
+	la 	sp, _sp0
+
 	# Go into zig trap handler
 	call m_trap 
 
@@ -95,4 +99,12 @@ switch_to_user:
 		.set 	i, i+1 
 	.endr 
 
+	# j .
+
 	mret 
+
+
+.global make_syscall 
+make_syscall:
+	ecall
+	ret

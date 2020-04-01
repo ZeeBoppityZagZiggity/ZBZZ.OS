@@ -1,5 +1,11 @@
 const kmem = @import("kmem.zig"); 
 
+const c = @cImport({
+    @cDefine("_NO_CRT_STDIO_INLINE", "1");
+    @cInclude("printf.h");
+    });
+
+
 pub fn LinkedList(comptime T: type) type {
     return packed struct {
         pub const Node = packed struct {
@@ -14,56 +20,109 @@ pub fn LinkedList(comptime T: type) type {
         len: usize = 0,
 
         pub fn push_front(self: *LinkedList(T), d: T) void {
-            if (self.first == null) {
-                var n = Node {
-                    .prev = null,
-                    .next = null, 
-                    .data = d,
-                }; 
-                self.*.first = &n;
-                self.*.last = &n; 
+            if (self.*.first == null) {
+                // var n = Node {
+                //     .prev = null,
+                //     .next = null, 
+                //     .data = d,
+                // }; 
+                // self.*.first = &n;
+                // self.*.last = &n; 
+                // self.*.len = 1;
+                var n = @ptrCast(?*Node, kmem.kzmalloc(@sizeOf(Node)));
+                n.?.*.prev = null;
+                n.?.*.next = null;
+                n.?.*.data = d;
+
+                self.*.first = n;
+                self.*.last = n;
                 self.*.len = 1;
+
                 // self = LinkedList(T) {
                 //     .first = n, 
                 //     .last = n, 
                 //     .len = 1,
                 // };
             } else {
-                var n = Node {
-                    .prev = null, 
-                    .next = self.*.first, 
-                    .data = d, 
-                }; 
-                self.*.first.?.*.prev = &n; 
-                self.*.first = &n;
-                self.*.len += 1;
+                // var n = Node {
+                //     .prev = null, 
+                //     .next = self.*.first, 
+                //     .data = d, 
+                // }; 
+                // self.*.first.?.*.prev = &n; 
+                // self.*.first = &n;
+                // self.*.len += 1;
+                var n = @ptrCast(?*Node, kmem.kzmalloc(@sizeOf(Node))); 
+                n.?.*.prev = null;
+                n.?.*.next = self.*.first; 
+                n.?.*.data = d; 
+
+                self.*.first.?.*.prev = n; 
+                self.*.first = n; 
+                self.*.len += 1; 
             }
         }
 
+        pub fn front(self: *LinkedList(T)) T {
+            return self.*.first.?.*.data;
+        }
+
         pub fn pop_front(self: *LinkedList(T)) T {
-            var retval = self.*.first.?.*.data; 
+            var f = self.*.first;
+            var retval: T = self.*.first.?.*.data; 
+            // c.printf(c"popped %x\n", retval);
             self.*.len -= 1; 
             if (self.*.len > 0) {
                 self.*.first = self.*.first.?.*.next; 
-                return retval;
+                // return retval;
             } else {
                 self.*.first = null;
                 self.*.last = null;
             }
+            kmem.kfree(@ptrCast([*]u8, f));
             return retval;
         }
 
         pub fn push_back(self: *LinkedList(T), d: T) void {
             if (self.last == null) {
-                var n = Node {
-                    .prev = null, 
-                    .next = null, 
-                    .data = d,
-                }; 
-                self.*.first = &n; 
-                self.*.last = &n; 
+                var n = @ptrCast(?*Node, kmem.kzmalloc(@sizeOf(Node)));
+                n.?.*.prev = null;
+                n.?.*.next = null; 
+                n.?.*.data = d;
+
+                self.*.first = n; 
+                self.*.last = n; 
                 self.*.len = 1;
+            } else {
+                var n = @ptrCast(?*Node, kmem.kzmalloc(@sizeOf(Node))); 
+                n.?.*.prev = self.*.last; 
+                n.?.*.next = null;
+                n.?.*.data = d; 
+
+                self.*.last.?.*.next = n; 
+                self.*.last = n;
+                self.*.len += 1; 
             }
+        }
+
+        pub fn back(self: *LinkedList(T)) T {
+            return self.*.last.?.*.data;
+        }
+
+        pub fn pop_back(self: *LinkedList(T)) T {
+            var f = self.*.last;
+            var retval: T = self.*.last.?.*.data; 
+            // c.printf(c"popped %x\n", retval);
+            self.*.len -= 1; 
+            if (self.*.len > 0) {
+                self.*.first = self.*.last.?.*.prev; 
+                // return retval;
+            } else {
+                self.*.first = null;
+                self.*.last = null;
+            }
+            kmem.kfree(@ptrCast([*]u8, f));
+            return retval;
         }
 
         pub fn addlen(self: *LinkedList(T), i: usize) void {

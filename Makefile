@@ -5,7 +5,7 @@ OBJCOPY=llvm-objcopy
 LDS=lds/output.ld
 LIBS=-lc -lgcc 
 CIC=-Iobjs/
-CFLAGS=-Wall -O0 -g -T$(LDS) -mabi=lp64d -march=rv64gc
+CFLAGS=-Wall -O0 -g -T$(LDS) -mabi=lp64d -march=rv64g
 CFLAGS+=$(CIC)
 CFLAGS+=-ffreestanding -nostartfiles -nostdinc -static -mcmodel=medany
 CFLAGS_PRINTF=$(CIC)

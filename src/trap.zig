@@ -6,6 +6,8 @@ const kmem = @import("kmem.zig");
 const timer = @import("timer.zig");
 const proc = @import("process.zig");
 const sched = @import("sched.zig");
+const sys = @import("syscall.zig");
+const cpu = @import("cpu.zig");
 // const uart_base_addr: usize = 0x10000000;
 
 const c = @cImport({
@@ -38,10 +40,16 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 c.printf(c"Supervisor Software Intterupt\n");
             },
             7 => {
+                // cpu.mscratch_write(@ptrToInt(&KERNEL_TRAP_FRAME));
                 c.printf(c"Timer Interrupt\n");
-                var s = sched.schedule(); 
+                // put process into proc list 
+                
+                // c.printf(c"addr of process list: %08x\n", @ptrToInt(&proc.PROCESS_LIST));
+                // asm volatile("j .");
+                var s = sched.schedule();
                 timer.set_timer_ms(0, 1000);
                 switch_to_user(s.frame, s.mepc, s.satp);
+                // switch_to_user(frame, epc, @intToPtr(*TrapFrame, frame).*.satp);
                 // mepc = epc;
             },
             11 => { //Machine External Interrupt
@@ -93,12 +101,15 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             },
             5 => {
                 c.printf(c"Load Access Fault\n");
+                // c.printf(c"%x\n", @intToPtr(*TrapFrame, frame).*.regs[1]);
+                c.printf(c"MEPC: %x\n", epc); 
+                printTrapFrame(frame);
                 // const epcstr = string_lib.dword2hex(epc);
                 // puts(epcstr);
                 // puts(" => ");
                 // var phys = page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc);
                 // puts(string_lib.dword2hex(phys));
-                // asm volatile ("j .");
+                asm volatile ("j .");
             },
             6 => {
                 c.printf(c"Store/AMO address misaligned\n");
@@ -108,7 +119,8 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 // asm volatile("j .");
             },
             8 => {
-                c.printf(c"Ecall from U-mode\n");
+                // c.printf(c"Ecall from U-mode\n");
+                mepc = sys.do_syscall(epc, frame);
             },
             9 => {
                 c.printf(c"Ecall from S-mode\n");
@@ -118,13 +130,13 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             },
             11 => {
                 c.printf(c"ecall from m-mode\n");
-                asm volatile ("j .");
+                // asm volatile ("j .");
             },
             //Page Faults
             12 => {
                 // Instruction page fault
                 c.printf(c"Instruction page fault CPU 0 (this is hardcoded btw)\n");
-                c.printf(c"Virt addr: %x\nPhys addr: %x\n", epc, page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc));
+                // c.printf(c"Virt addr: %x\nPhys addr: %x\n", epc, page.virt_to_phys(@intToPtr(*page.Table, @ptrToInt(kmem.get_page_table())), epc));
                 // const epcstr = string_lib.dword2hex(epc);
                 // uart.puts(epcstr);
                 // uart.puts(" => ");
@@ -136,6 +148,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             13 => {
                 //Load page fault
                 c.printf(c"Load Page Fault CPU 0 (this is hardcoded btw)\n");
+                asm volatile ("j .");
                 // mepc += 4;
             },
             15 => {
@@ -154,6 +167,20 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
 }
 
 pub fn emptyfunc() void {}
+
+pub fn printTrapFrame(frame: usize) void {
+    var fptr = @intToPtr(*TrapFrame, frame); 
+    var i: usize = 0; 
+    while(i < 32) {
+        c.printf(c"x%d: %08x ", i, fptr.*.regs[i]);
+        if ((i + 1) % 4 == 0) {
+            c.printf(c"\n");
+        }
+        i += 1; 
+        }
+        c.printf(c"SATP: %x\n", fptr.*.satp);
+        c.printf(c"TRAP STACK: %x\n", fptr.*.trap_stack);
+}
 
 /// TrapFrame
 /// @brief trap frame for storing context during trap handling

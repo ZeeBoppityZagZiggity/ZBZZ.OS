@@ -2,6 +2,11 @@
 const page = @import("page.zig");
 const assert = @import("std").debug.assert;
 
+const c = @cImport({
+    @cDefine("_NO_CRT_STDIO_INLINE", "1");
+    @cInclude("printf.h");
+    });
+
 pub const AllocListFlags = enum(usize) {
     Taken = 1 << 63,
 };
@@ -45,6 +50,8 @@ pub const AllocList = packed struct {
     }
 
     pub fn get_size(self: AllocList) usize {
+        // var stupidzig: usize = 1;
+        // return self.flags_size & ~stupidzig;
         return self.flags_size & ~@enumToInt(AllocListFlags.Taken);
     }
 };
@@ -117,8 +124,8 @@ pub fn kzmalloc(sz: usize) [*]u8 {
 pub fn kmalloc(sz: usize) [*]u8 {
     var size: usize = align_val(sz, 3) + @sizeOf(AllocList);
     var head = KMEM_HEAD;
-    // var tail = @intToPtr([*]AllocList, @ptrToInt(KMEM_HEAD) + (KMEM_ALLOC * page.PAGE_SIZE));
-    var tail = KMEM_HEAD + (KMEM_ALLOC * page.PAGE_SIZE);
+    var tail = @intToPtr([*]AllocList, @ptrToInt(KMEM_HEAD) + (KMEM_ALLOC * page.PAGE_SIZE));
+    // var tail = KMEM_HEAD + (KMEM_ALLOC * page.PAGE_SIZE);
     while (@ptrToInt(head) < @ptrToInt(tail)) {
         if (head[0].is_free() and size <= head[0].get_size()) {
             var chunk_size: usize = head[0].get_size();
@@ -126,8 +133,8 @@ pub fn kmalloc(sz: usize) [*]u8 {
             head[0].set_taken();
             if (rem > @sizeOf(AllocList)) {
                 //Still got some space left; split it up
-                // var next = @intToPtr([*]AllocList, @ptrToInt(head) + size);
-                var next = head + size;
+                var next = @intToPtr([*]AllocList, @ptrToInt(head) + size);
+                // var next = head + size;
                 next[0].set_free();
                 next[0].set_size(rem);
                 head[0].set_size(size);
@@ -139,8 +146,8 @@ pub fn kmalloc(sz: usize) [*]u8 {
             return @intToPtr([*]u8, @ptrToInt(head) + @sizeOf(AllocList)); //might be + something else? TODO
         } else {
             //Wasn't a free chunk; move on
-            // head = @intToPtr(*AllocList, @ptrToInt(head) + head.*.get_size());
-            head = head + head[0].get_size();
+            head = @intToPtr([*]AllocList, @ptrToInt(head) + head[0].get_size());
+            // head = head + head[0].get_size();
         }
     }
     //If we're here, we could not find a chunk that would yield enough
@@ -151,6 +158,7 @@ pub fn kmalloc(sz: usize) [*]u8 {
 
 pub fn kfree(ptr: [*]u8) void {
     if (ptr != undefined) {
+        c.printf(c"Freeing %08x...\n", @ptrToInt(ptr));
         var p = @intToPtr([*]AllocList, @ptrToInt(ptr) - @sizeOf(AllocList));
         if (p[0].is_taken()) {
             p[0].set_free();
@@ -161,14 +169,16 @@ pub fn kfree(ptr: [*]u8) void {
 
 pub fn coalesce() void {
     var head = KMEM_HEAD;
-    // var tail = @intToPtr(*AllocList, @ptrToInt(KMEM_HEAD) + (KMEM_ALLOC * page.PAGE_SIZE));
-    var tail = head + (KMEM_ALLOC * page.PAGE_SIZE);
+    var tail = @intToPtr(*AllocList, @ptrToInt(KMEM_HEAD) + (KMEM_ALLOC * page.PAGE_SIZE));
+    // var tail = head + (KMEM_ALLOC * page.PAGE_SIZE);
+    c.printf(c"Coalescing: %08x -> %08x\n", @ptrToInt(head), @ptrToInt(tail));
     while (@ptrToInt(head) < @ptrToInt(tail)) {
         // var next = @intToPtr(*AllocList, @ptrToInt(head) + head.*.get_size());
         var next = head + head[0].get_size();
         if (head[0].get_size() == 0) {
             //Oh fuck, we got ourselves some bad double free shit
             //that'll infinitely loop
+            c.printf(c"double free!\n");
             break;
         } else if (@ptrToInt(next) >= @ptrToInt(tail)) {
             //We done
@@ -178,7 +188,8 @@ pub fn coalesce() void {
             //monster mash
             head[0].set_size(head[0].get_size() + next[0].get_size());
         }
-        // head = @intToPtr(*AllocList, @ptrToInt(head) + head.*.get_size());
-        head = head + head[0].get_size();
+        head = @intToPtr([*]AllocList, @ptrToInt(head) + head[0].get_size());
+        // head = head + head[0].get_size();
     }
+    c.printf(c"Done Coalescing\n");
 }
