@@ -8,19 +8,20 @@ const proc = @import("process.zig");
 const sched = @import("sched.zig");
 const sys = @import("syscall.zig");
 const cpu = @import("cpu.zig");
+const virtio = @import("virtio.zig");
 // const uart_base_addr: usize = 0x10000000;
 
 const c = @cImport({
     @cDefine("_NO_CRT_STDIO_INLINE", "1");
     @cInclude("printf.h");
-    });
+});
 
 extern fn makeUART() void;
-extern fn put(din: u8) void; 
+extern fn put(din: u8) void;
 extern fn puts(din: [*]const u8) void;
-extern fn print(din: [*]u8) void; 
-extern fn read() u8; 
-extern fn switch_to_user(frame: usize, mepc: usize, satp: usize) noreturn; 
+extern fn print(din: [*]u8) void;
+extern fn read() u8;
+extern fn switch_to_user(frame: usize, mepc: usize, satp: usize) noreturn;
 
 export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: usize, frame: usize) usize {
     // const uart = uart_lib.MakeUART();
@@ -42,8 +43,8 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             7 => {
                 // cpu.mscratch_write(@ptrToInt(&KERNEL_TRAP_FRAME));
                 c.printf(c"Timer Interrupt\n");
-                // put process into proc list 
-                
+                // put process into proc list
+
                 // c.printf(c"addr of process list: %08x\n", @ptrToInt(&proc.PROCESS_LIST));
                 // asm volatile("j .");
                 var s = sched.schedule();
@@ -56,6 +57,9 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 // Get id from PLIC
                 const claim_id: u32 = plic.claim();
                 switch (claim_id) {
+                    1...8 => {
+                        virtio.handle_interrupt(interrupt);
+                    },
                     10 => { //UART
                         var rx: u8 = read();
                         switch (rx) {
@@ -102,7 +106,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             5 => {
                 c.printf(c"Load Access Fault\n");
                 // c.printf(c"%x\n", @intToPtr(*TrapFrame, frame).*.regs[1]);
-                c.printf(c"MEPC: %x\n", epc); 
+                c.printf(c"MEPC: %x\n", epc);
                 printTrapFrame(frame);
                 // const epcstr = string_lib.dword2hex(epc);
                 // puts(epcstr);
@@ -169,17 +173,17 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
 pub fn emptyfunc() void {}
 
 pub fn printTrapFrame(frame: usize) void {
-    var fptr = @intToPtr(*TrapFrame, frame); 
-    var i: usize = 0; 
-    while(i < 32) {
+    var fptr = @intToPtr(*TrapFrame, frame);
+    var i: usize = 0;
+    while (i < 32) {
         c.printf(c"x%d: %08x ", i, fptr.*.regs[i]);
         if ((i + 1) % 4 == 0) {
             c.printf(c"\n");
         }
-        i += 1; 
-        }
-        c.printf(c"SATP: %x\n", fptr.*.satp);
-        c.printf(c"TRAP STACK: %x\n", fptr.*.trap_stack);
+        i += 1;
+    }
+    c.printf(c"SATP: %x\n", fptr.*.satp);
+    c.printf(c"TRAP STACK: %x\n", fptr.*.trap_stack);
 }
 
 /// TrapFrame
