@@ -58,7 +58,7 @@ pub const Header = packed struct {
 };
 
 pub const Data = packed struct {
-    data: *u8,
+    data: [*]u8,
 };
 
 pub const Status = packed struct {
@@ -221,4 +221,120 @@ pub fn setup_block_device(ptr: *u32) bool {
     return true;
 }
 
+pub fn fill_next_descriptor(bd: *BlockDevice, desc: virtio.Descriptor) u16 {
+    // The ring structure increments here first. This allows us to skip
+    // index 0, which then in the used ring will show that .id > 0. This
+    // is one way to error check. We will eventually get back to 0 as
+    // this index is cyclical. However, it shows if the first read/write
+    // actually works.
+    bd.*.idx = (bd.*.idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
+    (bd.*.queue).*.desc[usize(bd.*.idx)] = desc;
+    if (((bd.*.queue).*.desc[usize(bd.*.idx)].flags & virtio.VIRTIO_DESC_F_NEXT) != 0) {
+        // If the next flag is set, we need another descriptor
+        (bd.*.queue).*.desc[usize(bd.*.idx)].next = (bd.*.idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
+    }
 
+    return bd.*.idx;
+}
+
+/// This is now a common block operation for both reads and writes. Therefore,
+/// when one thing needs to change, we can change it for both reads and writes.
+/// There is a lot of error checking that I haven't done. The block device reads
+/// sectors at a time, which are 512 bytes. Therefore, our buffer must be capable
+/// of storing multiples of 512 bytes depending on the size. The size is also
+/// a multiple of 512, but we don't really check that.
+/// We DO however, check that we aren't writing to an R/O device. This would
+/// cause a I/O error if we tried to write to a R/O device.
+pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, write: bool) void {
+    var bdev = &BLOCK_DEVICES[dev - 1];
+    if (bdev != undefined) {
+        if (bdev.*.read_only == true and write == true) {
+            c.printf("Trying to write to read only, you buffoon.\n");
+            return;
+        }
+        var sector = offset / 512;
+        var blk_request_size = @sizeOf(Request);
+        var blk_request = @ptrCast(*Request, kmem.kmalloc(blk_request_size));
+        var desc = virtio.Descriptor{
+            .addr = &(blk_request.*.header),
+            .len = @sizeOf(Header),
+            .flags = virtio.VIRTIO_DESC_F_NEXT,
+            .next = 0,
+        };
+        var head_idx = fill_next_descriptor(bdev, desc);
+
+        blk_request.*.header.sector = sector;
+        if (write == true) {
+            blk_request.*.header.blktype = virtio.VIRTIO_BLK_T_OUT;
+        } else {
+            blk_request.*.header.blktype = virtio.VIRTIO_BLK_T_IN;
+        }
+
+        // We put 111 in the status. Whenever the device finishes, it will write into
+        // status. If we read status and it is 111, we know that it wasn't written to by
+        // the device.
+        blk_request.*.data.data = buffer;
+        blk_request.*.header.reserved = 0;
+        blk_request.*.status.status = 111;
+
+        var flags = virtio.VIRTIO_DESC_F_NEXT;
+        if (write == true) {
+            flags |= virtio.VIRTIO_DESC_F_WRITE;
+        }
+        var desc = virtio.Descriptor{
+            .addr = u64(@ptrToInt(buffer)),
+            .len = size,
+            .flags = flags,
+            .next = 0,
+        };
+        var _data_idx = fill_next_descriptor(bdev, desc);
+
+        var desc = virtio.Descriptor{
+            .addr = &(blk_request.*.status),
+            .len = @sizeOf(Status),
+            .flags = virtio.VIRTIO_DESC_F_WRITE,
+            .next = 0,
+        };
+        var _status_idx = fill_next_descriptor(dev, desc);
+        (bdev.*.queue).*.avail.ring[usize((bdev.*.queue).*.avail.idx)] = head_idx;
+        (bdev.*.queue).*.avail.idx = ((bdev.*.queue).*.avail.idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
+
+        var tmpaddr = @ptrToInt(bdev.*.dev);
+        tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);
+        var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
+        tmpPtr.* = 0;
+    }
+}
+
+pub fn read(dev: usize, buffer: [*]u8, size: u32, offset: u64) void {
+    block_op(dev, buffer, size, offset, false);
+}
+
+pub fn write(dev: usize, buffer: [*]u8, size: u32, offset: u64) void {
+    block_op(dev, buffer, size, offset, true);
+}
+
+/// Here we handle block specific interrupts. Here, we need to check
+/// the used ring and wind it up until we've handled everything.
+/// This is how the device tells us that it's finished a request.
+pub fn pending(bd: *BlockDevice) void {
+    // Here we need to check the used ring and then free the resources
+    // given by the descriptor id.
+    var tmpQueue: *virtio.Queue = bd.*.queue;
+    while (bd.*.ack_used_idx != tmpQueue.*.used.idx) {
+        var elem: virtio.UsedElem = tmpQueue.*.used.ring[usize(bd.*.ack_used_idx)];
+        bd.*.ack_used_idx = (bd.*.ack_used_idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
+        kmem.kfree(@intToPtr([*]u8, tmpQueue.*.desc[usize(elem.id)].addr));
+    }
+}
+
+/// The trap code will route PLIC interrupts 1..=8 for virtio devices. When
+/// virtio determines that this is a block device, it sends it here.
+pub fn handle_interrupt(idx: usize) void {
+    var bdev = BLOCK_DEVICES[idx];
+    if (bdev != undefined) {
+        pending(bdev);
+    } else {
+        c.printf(c"Invalid block device for interrupt %d...\n", idx + 1);
+    }
+}
