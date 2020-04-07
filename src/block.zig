@@ -109,7 +109,7 @@ pub const VIRTIO_BLK_F_CONFIG_WCE: u32 = 11;
 pub const VIRTIO_BLK_F_DISCARD: u32 = 13;
 pub const VIRTIO_BLK_F_WRITE_ZEROES: u32 = 14;
 
-pub var BLOCK_DEVICES: [8]BlockDevice = undefined;
+pub var BLOCK_DEVICES = [_]BlockDevice{undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined};
 
 pub fn setup_block_device(ptr: *u32) bool {
     var idx = (usize(@ptrToInt(ptr)) - virtio.MMIO_VIRTIO_START) >> 12;
@@ -245,18 +245,18 @@ pub fn fill_next_descriptor(bd: *BlockDevice, desc: virtio.Descriptor) u16 {
 /// a multiple of 512, but we don't really check that.
 /// We DO however, check that we aren't writing to an R/O device. This would
 /// cause a I/O error if we tried to write to a R/O device.
-pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, write: bool) void {
+pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, writeCheck: bool) void {
     var bdev = &BLOCK_DEVICES[dev - 1];
     if (bdev != undefined) {
-        if (bdev.*.read_only == true and write == true) {
-            c.printf("Trying to write to read only, you buffoon.\n");
+        if (bdev.*.read_only == true and writeCheck == true) {
+            c.printf(c"Trying to write to read only, you buffoon.\n");
             return;
         }
         var sector = offset / 512;
-        var blk_request_size = @sizeOf(Request);
+        var blk_request_size: usize = @sizeOf(Request);
         var blk_request = @ptrCast(*Request, kmem.kmalloc(blk_request_size));
         var desc = virtio.Descriptor{
-            .addr = &(blk_request.*.header),
+            .addr = @ptrToInt(&(blk_request.*.header)),
             .len = @sizeOf(Header),
             .flags = virtio.VIRTIO_DESC_F_NEXT,
             .next = 0,
@@ -264,10 +264,10 @@ pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, write: bool) 
         var head_idx = fill_next_descriptor(bdev, desc);
 
         blk_request.*.header.sector = sector;
-        if (write == true) {
-            blk_request.*.header.blktype = virtio.VIRTIO_BLK_T_OUT;
+        if (writeCheck == true) {
+            blk_request.*.header.blktype = VIRTIO_BLK_T_OUT;
         } else {
-            blk_request.*.header.blktype = virtio.VIRTIO_BLK_T_IN;
+            blk_request.*.header.blktype = VIRTIO_BLK_T_IN;
         }
 
         // We put 111 in the status. Whenever the device finishes, it will write into
@@ -278,10 +278,10 @@ pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, write: bool) 
         blk_request.*.status.status = 111;
 
         var flags = virtio.VIRTIO_DESC_F_NEXT;
-        if (write == true) {
+        if (writeCheck == true) {
             flags |= virtio.VIRTIO_DESC_F_WRITE;
         }
-        var desc = virtio.Descriptor{
+        desc = virtio.Descriptor{
             .addr = u64(@ptrToInt(buffer)),
             .len = size,
             .flags = flags,
@@ -289,15 +289,16 @@ pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, write: bool) 
         };
         var _data_idx = fill_next_descriptor(bdev, desc);
 
-        var desc = virtio.Descriptor{
-            .addr = &(blk_request.*.status),
+        desc = virtio.Descriptor{
+            .addr = @ptrToInt(&(blk_request.*.status)),
             .len = @sizeOf(Status),
             .flags = virtio.VIRTIO_DESC_F_WRITE,
             .next = 0,
         };
-        var _status_idx = fill_next_descriptor(dev, desc);
-        (bdev.*.queue).*.avail.ring[usize((bdev.*.queue).*.avail.idx)] = head_idx;
-        (bdev.*.queue).*.avail.idx = ((bdev.*.queue).*.avail.idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
+        var _status_idx = fill_next_descriptor(bdev, desc);
+        var tmpIdx: u16 = (bdev.*.queue).*.avail.idx; 
+        (bdev.*.queue).*.avail.ring[tmpIdx] = head_idx;
+        (bdev.*.queue).*.avail.idx = (tmpIdx+ 1) % u16(virtio.VIRTIO_RING_SIZE);
 
         var tmpaddr = @ptrToInt(bdev.*.dev);
         tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);

@@ -35,7 +35,8 @@ CLEAR_O=objs/clear.o
 OUT=os.elf
 OUT_BIN=os.bin
 OUT_IMG=os.img
-QEMU_ARGS=-M virt -m 6M -bios none -serial mon:stdio #-smp 2
+DISK=hdd.dsk
+QEMU_ARGS=-M virt -m 6M -bios none -serial mon:stdio -drive if=none,format=raw,file=$(DISK),id=foo -device virtio-blk-device,scsi=off,drive=foo#-smp 2
 UART_O=objs/uart.o
 UART_LL=objs/uart.ll
 UART_S=objs/uart.s

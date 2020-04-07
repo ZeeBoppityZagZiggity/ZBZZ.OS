@@ -9,25 +9,25 @@ const kmem = @import("kmem.zig");
 const timer = @import("timer.zig");
 const proc = @import("process.zig");
 const sched = @import("sched.zig");
+const block = @import("block.zig");
 // const LinkedList = @import("linkedlist.zig").LinkedList;
 const uart_base_addr: usize = 0x10000000;
 
 const c = @cImport({
     @cDefine("_NO_CRT_STDIO_INLINE", "1");
     @cInclude("printf.h");
-    });
+});
 
 //pub var HEAP_START: usize = 0;
 //pub var HEAP_SIZE: usize = 0;
 extern fn makeUART() void;
-extern fn put(din: u8) void; 
+extern fn put(din: u8) void;
 extern fn puts(din: [*]const u8) void;
-extern fn print(din: [*]u8) void; 
-extern fn read() u8; 
+extern fn print(din: [*]u8) void;
+extern fn read() u8;
 
-extern fn switch_to_user(frame: usize, mepc: usize, satp: usize) noreturn; 
+extern fn switch_to_user(frame: usize, mepc: usize, satp: usize) noreturn;
 // extern fn cputs(c: [*]const u8) void;
-
 
 pub fn id_map_range(root: *page.Table, start: usize, end: usize, bits: usize) void {
     var memaddr = start & ~(page.PAGE_SIZE - 1);
@@ -40,7 +40,7 @@ pub fn id_map_range(root: *page.Table, start: usize, end: usize, bits: usize) vo
     }
 }
 
-export fn kinit() void{
+export fn kinit() void {
     trap.emptyfunc();
     const x = 0;
     // uart.uart_init();
@@ -81,11 +81,9 @@ export fn kinit() void{
     // id_map_range(root_ptr, _bss, _ebss, @enumToInt(page.EntryBits.ReadWrite));
     // //Map kernel stack
     // id_map_range(root_ptr, _kernel_stack, _ekernel_stack, @enumToInt(page.EntryBits.ReadWrite));
-    
 
     // //Map CLINT
     // id_map_range(root_ptr, timer.clint_base, timer.clint_end, @enumToInt(page.EntryBits.ReadWrite));
-
 
     // var root_ppn: usize = root_u >> 12;
     // var satp_val: usize = (8 << 60) | root_ppn;
@@ -102,30 +100,43 @@ export fn kinit() void{
     // //Store it in mscratch
     // cpu.mscratch_write(tf_ptr);
 
-
     // //Testing linked list from here
 
     // var l = LinkedList(i32) {
-    //     .first = null, 
-    //     .last = null, 
-    //     .len = 0 
-    // }; 
+    //     .first = null,
+    //     .last = null,
+    //     .len = 0
+    // };
     // c.printf(c"pushed 26\n");
     // l.push_back(26);
 
     // // c.printf(c"%x, %x\n", &l, &l.first);
     // // c.printf(c"%d\n", l.first.?.*.data);
     // // c.printf(c"front: %d\n", l.front());
-    // var tmp = l.pop_front(); 
+    // var tmp = l.pop_front();
     // c.printf(c"popped %d\n", tmp);
     // l.push_back(32);
-    // tmp = l.pop_front(); 
+    // tmp = l.pop_front();
     // c.printf(c"popped %d\n", tmp);
-    // // tmp = l.pop_front(); 
+    // // tmp = l.pop_front();
     // // c.printf(c"popped %d\n", tmp);
 
     // while(true) {}
-    // //DOne testing linked list 
+    // //DOne testing linked list
+
+    c.printf(c"Testing Block Driver ish\n");
+    var buffer = kmem.kmalloc(512);
+    block.read(8, buffer, 512, 0);
+    var i: u16 = 0;
+    while (i < 49) {
+        c.printf(c" :02x", buffer[i]);
+        if (i + 1 % 24 == 0) {
+            c.printf(c"\n");
+        }
+    }
+
+    kmem.kfree(buffer);
+    c.printf(c"Block Driver testing completed, bby./n");
 
     timer.set_timer_ms(0, 1000);
     c.printf(c"addr of process list: %08x\n", @ptrToInt(&proc.PROCESS_LIST));
@@ -135,12 +146,11 @@ export fn kinit() void{
     // c.printf(c"sp should be: %x, but is %x\n", proc.PROCESS_LIST[0].frame.*.regs[2], frame_ptr.*.regs[2]);
     // c.printf(c"switching to user\n");
     switch_to_user(s.frame, s.mepc, s.satp);
-    
+
     // c.printf(c"Oh no!!!!!\n");
     // c.printf(c"Exiting kinit\n");
     // return addr;
     // return satp_val;
-
 }
 
 //This stupid function exists because Zig's compiler has a (known) bug
@@ -173,34 +183,32 @@ export fn kmain() void {
     var ptr = page.zalloc(10);
     // c.cputs(c"check this out!\n");
     var a: i32 = 14;
-    var b: i32 = 18; 
+    var b: i32 = 18;
     c.printf(c"%d + %d = %05d\n", a, b, a + b);
     var str1 = c"Hello";
     var str2 = c"World";
     c.printf(c"%s, World!\n", str1);
     c.printf(c"Address of str1: 0x%08x\n", @ptrToInt(str1));
     // c.printf(c"Address of _text: %016x\n", _text);
-    
+
     // uart.puts(cpu.dword2hex(@ptrToInt(ptr)));
     page.printPageAllocations();
     c.printf(c"Kernel stack: %08x -> %08x\n", cpu._kernel_stack, cpu._ekernel_stack);
     c.printf(c"TRAP FRAME STACK PTR: %08x\n", trap.KERNEL_TRAP_FRAME.trap_stack);
 
     // var l = LinkedList(usize) {
-    //     .first = null, 
+    //     .first = null,
     //     .last = null,
     //     .len = 0,
     // };
 
-    // l.push_front(16); 
+    // l.push_front(16);
     // c.printf(c"%d\n", l.first.?.*.data);
-    // l.push_front(33); 
+    // l.push_front(33);
     // c.printf(c"%d -> %d\n", l.first.?.*.data, l.first.?.*.next.?.*.data);
     // var l1 = l.pop_front();
     // var l2 = l.pop_front();
     // c.printf(c"%d -> %d\n", l1, l2);
-
-
 
     // while (true) {}
 }

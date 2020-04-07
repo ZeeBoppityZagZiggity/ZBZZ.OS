@@ -31,33 +31,33 @@ pub const VIRTIO_RING_SIZE: usize = 1 << 7;
 // specified above. Any descriptor can be chained, hence the
 // next field, but only if the F_NEXT flag is specified.
 
-pub var Descriptor = packed struct {
+pub const Descriptor = packed struct {
     addr: u64,
     len: u32,
     flags: u16,
     next: u16,
 };
 
-pub var Available = packed struct {
+pub const Available = packed struct {
     flags: u16,
     idx: u16,
     ring: [VIRTIO_RING_SIZE]u16,
     event: u16,
 };
 
-pub var UsedElem = packed struct {
+pub const UsedElem = packed struct {
     id: u32,
     len: u32,
 };
 
-pub var Used = packed struct {
+pub const Used = packed struct {
     flags: u16,
     idx: u16,
     ring: [VIRTIO_RING_SIZE]UsedElem,
     event: u16,
 };
 
-pub var Queue = packed struct {
+pub const Queue = packed struct {
     desc: [VIRTIO_RING_SIZE]Descriptor,
     avail: Available,
     // Calculating padding, we need the used ring to start on a page boundary. We take the page size, subtract the
@@ -142,7 +142,7 @@ pub const MMIO_VIRTIO_END: usize = 0x10008000;
 pub const MMIO_VIRTIO_STRIDE: usize = 0x1000;
 pub const MMIO_VIRTIO_MAGIC: u32 = 0x74726976;
 
-pub var VirtioDevice = packed struct {
+pub const VirtioDevice = packed struct {
     devtype: DeviceTypes,
 
     pub fn new() VirtioDevice {
@@ -154,7 +154,7 @@ pub var VirtioDevice = packed struct {
     }
 };
 
-pub var VIRTIO_DEVICES: [8]VirtioDevice = undefined;
+pub var VIRTIO_DEVICES = [_]VirtioDevice{undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined};
 
 pub fn probe() void {
     var addr = MMIO_VIRTIO_START;
@@ -243,7 +243,7 @@ pub fn setup_input_device(_ptr, *u32) bool {
 pub fn handle_interrupt(interrupt: u32) void {
     var idx = usize(interrupt) - 1;
     var vd = VIRTIO_DEVICES[idx];
-    if (vd == undefined) {
+    if (vd) {
         switch (vd.devtype) {
             DeviceTypes.Block => {
                 block.handle_interrupt(idx);

@@ -58,7 +58,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 const claim_id: u32 = plic.claim();
                 switch (claim_id) {
                     1...8 => {
-                        virtio.handle_interrupt(interrupt);
+                        virtio.handle_interrupt(claim_id);
                     },
                     10 => { //UART
                         var rx: u8 = read();
