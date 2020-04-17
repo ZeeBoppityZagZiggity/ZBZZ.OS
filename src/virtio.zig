@@ -113,23 +113,23 @@ pub const StatusField = enum(usize) {
     //       return u32(self);
     //    }
 
-    pub fn testVal(self: StatusField, sf: u32, bit: StatusField) bool {
-        return (sf & u32(bit) != 0);
+    pub fn testVal( sf: u32, bit: StatusField) bool {
+        return (sf & @enumToInt(bit) != 0);
     }
 
-    pub fn is_failed(self: StatusField, sf: u32) bool {
+    pub fn is_failed( sf: u32) bool {
         return StatusField.testVal(sf, StatusField.Failed);
     }
 
-    pub fn needs_reset(self: StatusField, sf: u32) bool {
+    pub fn needs_reset( sf: u32) bool {
         return StatusField.testVal(sf, StatusField.DeviceNeedsReset);
     }
 
-    pub fn driver_ok(self: StatusField, sf: u32) bool {
+    pub fn driver_ok( sf: u32) bool {
         return StatusField.testVal(sf, StatusField.DriverOk);
     }
 
-    pub fn features_ok(self: StatusField, sf: u32) bool {
+    pub fn features_ok(sf: u32) bool {
         return StatusField.testVal(sf, StatusField.FeaturesOk);
     }
 };
@@ -154,7 +154,7 @@ pub const VirtioDevice = packed struct {
     }
 };
 
-pub var VIRTIO_DEVICES = [_]VirtioDevice{undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined};
+pub var VIRTIO_DEVICES: []VirtioDevice = undefined;
 
 pub fn probe() void {
     var addr = MMIO_VIRTIO_START;
@@ -167,55 +167,55 @@ pub fn probe() void {
         var deviceid = @intToPtr(*volatile u32, addr + 8).*; //Marz has .add(), but i think thats with ptr arith..
 
         if (MMIO_VIRTIO_MAGIC != magicvalue) {
-            c.printf("NOT virtio\n");
+            c.printf(c"NOT virtio\n");
         } else if (0 == deviceid) {
-            c.printf("NOT connected\n");
+            c.printf(c"NOT connected\n");
         } else {
             switch (deviceid) {
                 1 => {
-                    c.printf("Network device...\n");
+                    c.printf(c"Network device...\n");
                     if (false == setup_network_device(ptr)) {
-                        c.printf("Network Setup Failed!\n");
+                        c.printf(c"Network Setup Failed!\n");
                     } else {
-                        c.printf("Network Setup Succeeded!\n");
+                        c.printf(c"Network Setup Succeeded!\n");
                     }
                 },
                 2 => {
-                    c.printf("Block device...\n");
-                    if (false == setup_block_device(ptr)) {
-                        c.printf("Block Setup Failed!\n");
+                    c.printf(c"Block device...\n");
+                    if (false == block.setup_block_device(ptr)) {
+                        c.printf(c"Block Setup Failed!\n");
                     } else {
                         var idx = (addr - MMIO_VIRTIO_START) >> 12;
                         VIRTIO_DEVICES[idx] = VirtioDevice.newWith(DeviceTypes.Block);
-                        c.printf("Block Setup Succeeded!\n");
+                        c.printf(c"Block Setup Succeeded!\n");
                     }
                 },
                 4 => {
-                    c.printf("Entropy device...\n");
+                    c.printf(c"Entropy device...\n");
                     if (false == rng.setup_entropy_device(ptr)) {
-                        c.printf("Entropy Setup Failed!\n");
+                        c.printf(c"Entropy Setup Failed!\n");
                     } else {
-                        c.printf("Entropy Setup Succeeded!\n");
+                        c.printf(c"Entropy Setup Succeeded!\n");
                     }
                 },
                 16 => {
-                    c.printf("GPU device...\n");
+                    c.printf(c"GPU device...\n");
                     if (false == setup_gpu_device(ptr)) {
-                        c.printf("GPU Setup Failed!\n");
+                        c.printf(c"GPU Setup Failed!\n");
                     } else {
-                        c.printf("GPU Setup Succeeded!\n");
+                        c.printf(c"GPU Setup Succeeded!\n");
                     }
                 },
                 18 => {
-                    c.printf("Input device...\n");
+                    c.printf(c"Input device...\n");
                     if (false == setup_input_device(ptr)) {
-                        c.printf("Input Setup Failed!\n");
+                        c.printf(c"Input Setup Failed!\n");
                     } else {
-                        c.printf("Input Setup Succeeded!\n");
+                        c.printf(c"Input Setup Succeeded!\n");
                     }
                 },
                 else => {
-                    c.printf("Unknown Device Type!\n");
+                    c.printf(c"Unknown Device Type!\n");
                 },
             }
         }
@@ -224,15 +224,15 @@ pub fn probe() void {
     }
 }
 
-pub fn setup_network_device(_ptr, *u32) bool {
+pub fn setup_network_device(_ptr: *volatile u32) bool {
     return false;
 }
 
-pub fn setup_gpu_device(_ptr, *u32) bool {
+pub fn setup_gpu_device(_ptr: * volatile u32) bool {
     return false;
 }
 
-pub fn setup_input_device(_ptr, *u32) bool {
+pub fn setup_input_device(_ptr: * volatile u32) bool {
     return false;
 }
 
@@ -243,16 +243,16 @@ pub fn setup_input_device(_ptr, *u32) bool {
 pub fn handle_interrupt(interrupt: u32) void {
     var idx = usize(interrupt) - 1;
     var vd = VIRTIO_DEVICES[idx];
-    if (vd) {
-        switch (vd.devtype) {
-            DeviceTypes.Block => {
-                block.handle_interrupt(idx);
-            },
-            else => {
-                c.printf("Invalid device generated interrupt!\n");
-            },
-        }
-    } else {
-        c.printf("Spurious interrupt %d!\n", interrupt);
+//    if (vd == undefined) {
+    switch (vd.devtype) {
+        DeviceTypes.Block => {
+            block.handle_interrupt(idx);
+        },
+        else => {
+            c.printf(c"Invalid device generated interrupt!\n");
+        },
     }
+//    } else {
+//        c.printf("Spurious interrupt %d!\n", interrupt);
+//    }
 }

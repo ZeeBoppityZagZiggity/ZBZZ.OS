@@ -111,7 +111,7 @@ pub const VIRTIO_BLK_F_WRITE_ZEROES: u32 = 14;
 
 pub var BLOCK_DEVICES = [_]BlockDevice{undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined};
 
-pub fn setup_block_device(ptr: *u32) bool {
+pub fn setup_block_device(ptr: *volatile u32) bool {
     var idx = (usize(@ptrToInt(ptr)) - virtio.MMIO_VIRTIO_START) >> 12;
 
     //Essentially, we want to write 0 into the status register
@@ -124,11 +124,11 @@ pub fn setup_block_device(ptr: *u32) bool {
 
     //Set ACKNOWLEDGE status bit
     var status_bits = @enumToInt(virtio.StatusField.Acknowledge);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     //Set DRIVER status bit
     status_bits |= @enumToInt(virtio.StatusField.DriverOk);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     // 4. Read device feature bits, write subset of feature
     // bits understood by OS and driver to the device.
@@ -136,7 +136,7 @@ pub fn setup_block_device(ptr: *u32) bool {
     tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures) * 4);
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     var host_features = tmpPtr.*;
-    var guest_features = host_features & ~(1 << VIRTIO_BLK_F_RO);
+    var guest_features = host_features & ~(@intCast(u32,1 << VIRTIO_BLK_F_RO));
     var ro = (host_features & (1 << VIRTIO_BLK_F_RO)) != 0;
     tmpaddr = @ptrToInt(ptr);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures) * 4);
@@ -148,7 +148,7 @@ pub fn setup_block_device(ptr: *u32) bool {
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     status_bits |= @enumToInt(virtio.StatusField.FeaturesOk);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     // 6. Re-read status to ensure FEATURES_OK is still set.
     // Otherwise, it doesn't support our features.
@@ -158,7 +158,7 @@ pub fn setup_block_device(ptr: *u32) bool {
     // the features that we request. Therefore, this is
     // considered a "failed" state.
     if (false == virtio.StatusField.features_ok(status_ok)) {
-        c.printf("Our Features failed bruh..\n");
+        c.printf(c"Our Features failed bruh..\n");
         tmpPtr.* = @enumToInt(virtio.StatusField.Failed);
         return false;
     }
@@ -178,7 +178,7 @@ pub fn setup_block_device(ptr: *u32) bool {
     tmpPtr.* = u32(virtio.VIRTIO_RING_SIZE);
 
     if (u32(virtio.VIRTIO_RING_SIZE) > qnmax) {
-        c.printf("Queue size fail :(\n");
+        c.printf(c"Queue size fail :(\n");
         return false;
     }
 
@@ -189,7 +189,7 @@ pub fn setup_block_device(ptr: *u32) bool {
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
-    var queue_ptr = [*]virtio.Queue(page.zalloc(num_pages));
+    var queue_ptr = @ptrCast(*virtio.Queue, page.zalloc(num_pages));
     var queue_pfn = @ptrToInt(queue_ptr);
     tmpaddr = @ptrToInt(ptr);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize) * 4);
@@ -199,11 +199,11 @@ pub fn setup_block_device(ptr: *u32) bool {
     tmpaddr = @ptrToInt(ptr);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn) * 4);
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-    tmpPtr.* = u32(queue_pfn / page.PAGE_SIZE);
+    tmpPtr.* = @intCast(u32,queue_pfn / page.PAGE_SIZE);
 
     var bd = BlockDevice{
         .queue = queue_ptr,
-        .dev = ptr,
+        .dev = @ptrCast(*u32,ptr),
         .idx = 0,
         .ack_used_idx = 0,
         .read_only = ro,
@@ -216,7 +216,7 @@ pub fn setup_block_device(ptr: *u32) bool {
     tmpaddr = @ptrToInt(ptr);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     return true;
 }
@@ -245,7 +245,7 @@ pub fn fill_next_descriptor(bd: *BlockDevice, desc: virtio.Descriptor) u16 {
 /// a multiple of 512, but we don't really check that.
 /// We DO however, check that we aren't writing to an R/O device. This would
 /// cause a I/O error if we tried to write to a R/O device.
-pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, writeCheck: bool) void {
+pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writeCheck: bool) void {
     var bdev = &BLOCK_DEVICES[dev - 1];
     if (bdev != undefined) {
         if (bdev.*.read_only == true and writeCheck == true) {
@@ -307,11 +307,11 @@ pub fn block_op(dev: usize, buffer: [*]u8, size: u32, offset: u64, writeCheck: b
     }
 }
 
-pub fn read(dev: usize, buffer: [*]u8, size: u32, offset: u64) void {
+pub fn read(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64) void {
     block_op(dev, buffer, size, offset, false);
 }
 
-pub fn write(dev: usize, buffer: [*]u8, size: u32, offset: u64) void {
+pub fn write(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64) void {
     block_op(dev, buffer, size, offset, true);
 }
 
@@ -333,9 +333,9 @@ pub fn pending(bd: *BlockDevice) void {
 /// virtio determines that this is a block device, it sends it here.
 pub fn handle_interrupt(idx: usize) void {
     var bdev = BLOCK_DEVICES[idx];
-    if (bdev != undefined) {
-        pending(bdev);
-    } else {
-        c.printf(c"Invalid block device for interrupt %d...\n", idx + 1);
-    }
+//    if (bdev != undefined) {
+    pending(&bdev);
+//    } else {
+//        c.printf(c"Invalid block device for interrupt %d...\n", idx + 1);
+//   }
 }

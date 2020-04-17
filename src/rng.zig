@@ -25,7 +25,7 @@ pub const EntropyDevice = packed struct {
 
 pub var ENTROPY_DEVICES: [8]EntropyDevice = undefined;
 
-pub fn setup_entropy_device(ptr: *u32) bool {
+pub fn setup_entropy_device(ptr: *volatile u32) bool {
     var idx = (usize(@ptrToInt(ptr)) - virtio.MMIO_VIRTIO_START) >> 12;
 
     //Essentially, we want to write 0 into the status register
@@ -38,11 +38,11 @@ pub fn setup_entropy_device(ptr: *u32) bool {
 
     //Set ACKNOWLEDGE status bit
     var status_bits = @enumToInt(virtio.StatusField.Acknowledge);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     //Set DRIVER status bit
     status_bits |= @enumToInt(virtio.StatusField.DriverOk);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     // 4. Read device feature bits, write subset of feature
     // bits understood by OS and driver to the device.
@@ -60,7 +60,7 @@ pub fn setup_entropy_device(ptr: *u32) bool {
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     status_bits |= @enumToInt(virtio.StatusField.FeaturesOk);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     // 6. Re-read status to ensure FEATURES_OK is still set.
     // Otherwise, it doesn't support our features.
@@ -70,7 +70,7 @@ pub fn setup_entropy_device(ptr: *u32) bool {
     // the features that we request. Therefore, this is
     // considered a "failed" state.
     if (false == virtio.StatusField.features_ok(status_ok)) {
-        c.printf("Our Features failed bruh..\n");
+        c.printf(c"Our Features failed bruh..\n");
         tmpPtr.* = @enumToInt(virtio.StatusField.Failed);
         return false;
     }
@@ -90,7 +90,7 @@ pub fn setup_entropy_device(ptr: *u32) bool {
     tmpPtr.* = u32(virtio.VIRTIO_RING_SIZE);
 
     if (u32(virtio.VIRTIO_RING_SIZE) > qnmax) {
-        c.printf("Queue size fail :(\n");
+        c.printf(c"Queue size fail :(\n");
         return false;
     }
 
@@ -101,7 +101,7 @@ pub fn setup_entropy_device(ptr: *u32) bool {
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
-    var queue_ptr = [*]virtio.Queue(page.zalloc(num_pages));
+    var queue_ptr = @ptrCast(*virtio.Queue, page.zalloc(num_pages));
     var queue_pfn = @ptrToInt(queue_ptr);
     tmpaddr = @ptrToInt(ptr);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize) * 4);
@@ -111,18 +111,18 @@ pub fn setup_entropy_device(ptr: *u32) bool {
     tmpaddr = @ptrToInt(ptr);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn) * 4);
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-    tmpPtr.* = u32(queue_pfn / page.PAGE_SIZE);
+    tmpPtr.* = @intCast(u32,queue_pfn / page.PAGE_SIZE);
 
     // 8. Set the DRIVER_OK status bit. Device is now "live"
     status_bits |= @enumToInt(virtio.StatusField.DriverOk);
     tmpaddr = @ptrToInt(ptr);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-    tmpPtr.* = status_bits;
+    tmpPtr.* = @intCast(u32,status_bits);
 
     var rngdev = EntropyDevice{
         .queue = queue_ptr,
-        .dev = ptr,
+        .dev = @ptrCast(*u32,ptr),
         .idx = 0,
         .ack_used_idx = 0,
     };

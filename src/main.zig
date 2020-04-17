@@ -10,6 +10,7 @@ const timer = @import("timer.zig");
 const proc = @import("process.zig");
 const sched = @import("sched.zig");
 const block = @import("block.zig");
+const virtio = @import("virtio.zig");
 // const LinkedList = @import("linkedlist.zig").LinkedList;
 const uart_base_addr: usize = 0x10000000;
 
@@ -90,10 +91,27 @@ export fn kinit() void {
     // cpu.satp_write(satp_val);
 
     // Set up the PLIC
+    plic.set_threshold(0);
+    plic.enable(1);
+    plic.set_priority(1, 1);
+    plic.enable(2);
+    plic.set_priority(2, 1);
+    plic.enable(3);
+    plic.set_priority(3, 1);
+    plic.enable(4);
+    plic.set_priority(4, 1);
+    plic.enable(5);
+    plic.set_priority(5, 1);
+    plic.enable(6);
+    plic.set_priority(6, 1);
+    plic.enable(7);
+    plic.set_priority(7, 1);
+    plic.enable(8);
+    plic.set_priority(8, 1);
+    plic.enable(9);
+    plic.set_priority(9, 1);
     plic.enable(10);
     plic.set_priority(10, 1);
-    plic.set_threshold(0);
-
     //Create Trap Frame Pointer
     // const tf = @ptrCast(*const u8, &trap.KERNEL_TRAP_FRAME);
     // const tf_ptr = @ptrToInt(tf);
@@ -123,6 +141,8 @@ export fn kinit() void {
 
     // while(true) {}
     // //DOne testing linked list
+
+    virtio.probe();
 
     c.printf(c"Testing Block Driver ish\n");
     var buffer = kmem.kmalloc(512);
