@@ -109,7 +109,7 @@ pub const VIRTIO_BLK_F_CONFIG_WCE: u32 = 11;
 pub const VIRTIO_BLK_F_DISCARD: u32 = 13;
 pub const VIRTIO_BLK_F_WRITE_ZEROES: u32 = 14;
 
-pub var BLOCK_DEVICES = [_]BlockDevice{undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined};
+pub var BLOCK_DEVICES: [8]BlockDevice = undefined;
 
 pub fn setup_block_device(ptr: *volatile u32) bool {
     var idx = (usize(@ptrToInt(ptr)) - virtio.MMIO_VIRTIO_START) >> 12;
@@ -118,7 +118,8 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     //Peep the volatile.
     //Peep the * 4 because 4 byte offset (I believe...)
     var tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
@@ -133,19 +134,22 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     // 4. Read device feature bits, write subset of feature
     // bits understood by OS and driver to the device.
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     var host_features = tmpPtr.*;
     var guest_features = host_features & ~(@intCast(u32,1 << VIRTIO_BLK_F_RO));
     var ro = (host_features & (1 << VIRTIO_BLK_F_RO)) != 0;
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = guest_features;
 
     // 5. Set the FEATURES_OK status bit
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     status_bits |= @enumToInt(virtio.StatusField.FeaturesOk);
     tmpPtr.* = @intCast(u32,status_bits);
@@ -168,16 +172,18 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     // queue size is valid because the device can only take
     // a certain size.
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNumMax) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNumMax) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNumMax));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     var qnmax = tmpPtr.*;
 
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNum) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNum) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNum));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = u32(virtio.VIRTIO_RING_SIZE);
 
-    if (u32(virtio.VIRTIO_RING_SIZE) > qnmax) {
+    if (@intCast(u32,virtio.VIRTIO_RING_SIZE) > qnmax) {
         c.printf(c"Queue size fail :(\n");
         return false;
     }
@@ -185,19 +191,22 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     var num_pages = (@sizeOf(virtio.Queue) + page.PAGE_SIZE - 1) / page.PAGE_SIZE;
 
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueSel) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueSel) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueSel));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
     var queue_ptr = @ptrCast(*virtio.Queue, page.zalloc(num_pages));
     var queue_pfn = @ptrToInt(queue_ptr);
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = u32(page.PAGE_SIZE);
 
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = @intCast(u32,queue_pfn / page.PAGE_SIZE);
 
@@ -214,9 +223,12 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     // 8. Set the DRIVER_OK status bit. Device is now "live"
     status_bits |= @enumToInt(virtio.StatusField.DriverOk);
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = @intCast(u32,status_bits);
+
+   
 
     return true;
 }
@@ -227,10 +239,12 @@ pub fn fill_next_descriptor(bd: *BlockDevice, desc: virtio.Descriptor) u16 {
     // is one way to error check. We will eventually get back to 0 as
     // this index is cyclical. However, it shows if the first read/write
     // actually works.
+    //c.printf(c"FND bd.idx = %d\n", bd.*.idx);
     bd.*.idx = (bd.*.idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
     (bd.*.queue).*.desc[usize(bd.*.idx)] = desc;
     if (((bd.*.queue).*.desc[usize(bd.*.idx)].flags & virtio.VIRTIO_DESC_F_NEXT) != 0) {
         // If the next flag is set, we need another descriptor
+       // c.printf(c"Got in here like we should.\n");
         (bd.*.queue).*.desc[usize(bd.*.idx)].next = (bd.*.idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
     }
 
@@ -247,64 +261,70 @@ pub fn fill_next_descriptor(bd: *BlockDevice, desc: virtio.Descriptor) u16 {
 /// cause a I/O error if we tried to write to a R/O device.
 pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writeCheck: bool) void {
     var bdev = &BLOCK_DEVICES[dev - 1];
-    if (bdev != undefined) {
-        if (bdev.*.read_only == true and writeCheck == true) {
-            c.printf(c"Trying to write to read only, you buffoon.\n");
-            return;
-        }
-        var sector = offset / 512;
-        var blk_request_size: usize = @sizeOf(Request);
-        var blk_request = @ptrCast(*Request, kmem.kmalloc(blk_request_size));
-        var desc = virtio.Descriptor{
-            .addr = @ptrToInt(&(blk_request.*.header)),
-            .len = @sizeOf(Header),
-            .flags = virtio.VIRTIO_DESC_F_NEXT,
-            .next = 0,
-        };
-        var head_idx = fill_next_descriptor(bdev, desc);
 
-        blk_request.*.header.sector = sector;
-        if (writeCheck == true) {
-            blk_request.*.header.blktype = VIRTIO_BLK_T_OUT;
-        } else {
-            blk_request.*.header.blktype = VIRTIO_BLK_T_IN;
-        }
-
-        // We put 111 in the status. Whenever the device finishes, it will write into
-        // status. If we read status and it is 111, we know that it wasn't written to by
-        // the device.
-        blk_request.*.data.data = buffer;
-        blk_request.*.header.reserved = 0;
-        blk_request.*.status.status = 111;
-
-        var flags = virtio.VIRTIO_DESC_F_NEXT;
-        if (writeCheck == true) {
-            flags |= virtio.VIRTIO_DESC_F_WRITE;
-        }
-        desc = virtio.Descriptor{
-            .addr = u64(@ptrToInt(buffer)),
-            .len = size,
-            .flags = flags,
-            .next = 0,
-        };
-        var _data_idx = fill_next_descriptor(bdev, desc);
-
-        desc = virtio.Descriptor{
-            .addr = @ptrToInt(&(blk_request.*.status)),
-            .len = @sizeOf(Status),
-            .flags = virtio.VIRTIO_DESC_F_WRITE,
-            .next = 0,
-        };
-        var _status_idx = fill_next_descriptor(bdev, desc);
-        var tmpIdx: u16 = (bdev.*.queue).*.avail.idx; 
-        (bdev.*.queue).*.avail.ring[tmpIdx] = head_idx;
-        (bdev.*.queue).*.avail.idx = (tmpIdx+ 1) % u16(virtio.VIRTIO_RING_SIZE);
-
-        var tmpaddr = @ptrToInt(bdev.*.dev);
-        tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);
-        var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-        tmpPtr.* = 0;
+    //if (bdev != undefined) {
+    if (bdev.*.read_only == true and writeCheck == true) {
+        c.printf(c"Trying to write to read only, you buffoon.\n");
+        return;
     }
+    var sector = offset / 512;
+    var blk_request_size: usize = @sizeOf(Request);
+    var blk_request = @ptrCast(*Request, kmem.kmalloc(blk_request_size));
+    var desc = virtio.Descriptor{
+        .addr = @ptrToInt(&(blk_request.*.header)),
+        .len = @sizeOf(Header),
+        .flags = virtio.VIRTIO_DESC_F_NEXT,
+        .next = 0,
+    };
+    var head_idx = fill_next_descriptor(bdev, desc);
+
+    blk_request.*.header.sector = sector;
+    if (writeCheck == true) {
+        blk_request.*.header.blktype = VIRTIO_BLK_T_OUT;
+    } else {
+        blk_request.*.header.blktype = VIRTIO_BLK_T_IN;
+    }
+
+    // We put 111 in the status. Whenever the device finishes, it will write into
+    // status. If we read status and it is 111, we know that it wasn't written to by
+    // the device.
+    blk_request.*.data.data = buffer;
+    blk_request.*.header.reserved = 0;
+    blk_request.*.status.status = 111;
+
+    var flags = virtio.VIRTIO_DESC_F_NEXT;
+    if (writeCheck == true) {
+        flags |= virtio.VIRTIO_DESC_F_WRITE;
+    }
+    desc = virtio.Descriptor{
+        .addr = u64(@ptrToInt(buffer)),
+        .len = size,
+        .flags = flags,
+        .next = 0,
+    };
+    var _data_idx = fill_next_descriptor(bdev, desc);
+
+    desc = virtio.Descriptor{
+        .addr = @ptrToInt(&(blk_request.*.status)),
+        .len = @sizeOf(Status),
+        .flags = virtio.VIRTIO_DESC_F_WRITE,
+        .next = 0,
+    };
+    var _status_idx = fill_next_descriptor(bdev, desc);
+    var tmpIdx: u16 = @intCast(u16,(@intCast(usize,(bdev.*.queue).*.avail.idx)) % virtio.VIRTIO_RING_SIZE); 
+    //(bdev.*.queue).*.avail.ring[tmpIdx] = head_idx;
+    c.printf(c"DEBUG --> tmpIdx = %d\n", tmpIdx);
+    (bdev.*.queue).*.avail.ring[0] = head_idx;
+    (bdev.*.queue).*.avail.idx = (tmpIdx+ 1) % u16(virtio.VIRTIO_RING_SIZE);
+
+    //c.printf(c"DEBUG --> tmpIdx = %d\n", (bdev.*.queue).*.avail.idx);
+
+    var tmpaddr = @ptrToInt(bdev.*.dev);
+    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify));
+    var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
+    tmpPtr.* = 0;
+    //}
 }
 
 pub fn read(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64) void {
@@ -322,8 +342,11 @@ pub fn pending(bd: *BlockDevice) void {
     // Here we need to check the used ring and then free the resources
     // given by the descriptor id.
     var tmpQueue: *virtio.Queue = bd.*.queue;
+    c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
     while (bd.*.ack_used_idx != tmpQueue.*.used.idx) {
-        var elem: virtio.UsedElem = tmpQueue.*.used.ring[usize(bd.*.ack_used_idx)];
+        //var elem: virtio.UsedElem = tmpQueue.*.used.ring[@intCast(usize,bd.*.ack_used_idx)];
+        c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
+        var elem: virtio.UsedElem = tmpQueue.*.used.ring[0];
         bd.*.ack_used_idx = (bd.*.ack_used_idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
         kmem.kfree(@intToPtr([*]u8, tmpQueue.*.desc[usize(elem.id)].addr));
     }
@@ -334,6 +357,7 @@ pub fn pending(bd: *BlockDevice) void {
 pub fn handle_interrupt(idx: usize) void {
     var bdev = BLOCK_DEVICES[idx];
 //    if (bdev != undefined) {
+    c.printf(c"DEBUG --> Handling block dev interrupt.\n");
     pending(&bdev);
 //    } else {
 //        c.printf(c"Invalid block device for interrupt %d...\n", idx + 1);

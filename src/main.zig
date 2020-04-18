@@ -149,14 +149,17 @@ export fn kinit() void {
     block.read(8, buffer, 512, 0);
     var i: u16 = 0;
     while (i < 49) {
-        c.printf(c" :02x", buffer[i]);
-        if (i + 1 % 24 == 0) {
+        c.printf(c" :%02x", buffer[i]);
+        if (((i + 1) % 24)== 0) {
             c.printf(c"\n");
         }
+        i += 1;
     }
 
+    c.printf(c"\n");
+
     kmem.kfree(buffer);
-    c.printf(c"Block Driver testing completed, bby./n");
+    c.printf(c"Block Driver testing completed, bby. \n");
 
     timer.set_timer_ms(0, 1000);
     c.printf(c"addr of process list: %08x\n", @ptrToInt(&proc.PROCESS_LIST));

@@ -32,7 +32,7 @@ pub fn setup_entropy_device(ptr: *volatile u32) bool {
     //Peep the volatile.
     //Peep the * 4 because 4 byte offset (I believe...)
     var tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
@@ -47,17 +47,17 @@ pub fn setup_entropy_device(ptr: *volatile u32) bool {
     // 4. Read device feature bits, write subset of feature
     // bits understood by OS and driver to the device.
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     var host_features = tmpPtr.*;
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = host_features;
 
     // 5. Set the FEATURES_OK status bit
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     status_bits |= @enumToInt(virtio.StatusField.FeaturesOk);
     tmpPtr.* = @intCast(u32,status_bits);
@@ -80,12 +80,12 @@ pub fn setup_entropy_device(ptr: *volatile u32) bool {
     // queue size is valid because the device can only take
     // a certain size.
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNumMax) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNumMax));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     var qnmax = tmpPtr.*;
 
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNum) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNum));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = u32(virtio.VIRTIO_RING_SIZE);
 
@@ -97,26 +97,26 @@ pub fn setup_entropy_device(ptr: *volatile u32) bool {
     var num_pages = (@sizeOf(virtio.Queue) + page.PAGE_SIZE - 1) / page.PAGE_SIZE;
 
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueSel) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueSel));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
     var queue_ptr = @ptrCast(*virtio.Queue, page.zalloc(num_pages));
     var queue_pfn = @ptrToInt(queue_ptr);
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = u32(page.PAGE_SIZE);
 
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = @intCast(u32,queue_pfn / page.PAGE_SIZE);
 
     // 8. Set the DRIVER_OK status bit. Device is now "live"
     status_bits |= @enumToInt(virtio.StatusField.DriverOk);
     tmpaddr = @ptrToInt(ptr);
-    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
+    tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = @intCast(u32,status_bits);
 

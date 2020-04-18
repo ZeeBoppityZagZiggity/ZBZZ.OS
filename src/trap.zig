@@ -56,6 +56,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
             11 => { //Machine External Interrupt
                 // Get id from PLIC
                 const claim_id: u32 = plic.claim();
+                c.printf(c"DEBUG--> PLIC INTERRUPT: %d", claim_id);
                 switch (claim_id) {
                     1...8 => {
                         virtio.handle_interrupt(claim_id);

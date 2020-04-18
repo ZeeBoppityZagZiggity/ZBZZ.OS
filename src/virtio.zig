@@ -53,10 +53,10 @@ pub const UsedElem = packed struct {
 pub const Used = packed struct {
     flags: u16,
     idx: u16,
-    ring: [VIRTIO_RING_SIZE]UsedElem,
     event: u16,
+    ring: [VIRTIO_RING_SIZE]UsedElem,
+    
 };
-
 pub const Queue = packed struct {
     desc: [VIRTIO_RING_SIZE]Descriptor,
     avail: Available,
@@ -66,9 +66,18 @@ pub const Queue = packed struct {
     used: Used,
 };
 
+//pub const Queue = /*packed struct {
+//    desc: [VIRTIO_RING_SIZE]Descriptor,
+//    avail: Available,
+    // Calculating padding, we need the used ring to start on a page boundary. We take the page size, subtract the
+    // amount the descriptor ring takes then subtract the available structure and ring.
+//    padding0: [page.PAGE_SIZE - @sizeOf(Descriptor) * VIRTIO_RING_SIZE - @sizeOf(Available)]u8,
+//    used: Used,
+//};
+
 // The MMIO transport is "legacy" in QEMU, so these registers represent
 // the legacy interface.
-pub const MmioOffsets = enum(u32) { //TODO: MARZ HAS USIZE, BUT HE WANTS U32, I THINK
+pub const MmioOffsets = enum(usize) { //TODO: MARZ HAS USIZE, BUT HE WANTS U32, I THINK
     MagicValue = 0x000,
     Version = 0x004,
     DeviceId = 0x008,
@@ -154,13 +163,13 @@ pub const VirtioDevice = packed struct {
     }
 };
 
-pub var VIRTIO_DEVICES: []VirtioDevice = undefined;
+pub var VIRTIO_DEVICES: [8]VirtioDevice = undefined;
 
 pub fn probe() void {
     var addr = MMIO_VIRTIO_START;
 
     while (addr <= MMIO_VIRTIO_END) {
-        c.printf(c"Virtio probing 0x{:08x}...\n", addr);
+        c.printf(c"Virtio probing 0x:%.08x...\n", addr);
 
         var ptr = @intToPtr(*volatile u32, addr);
         var magicvalue = ptr.*;
@@ -184,7 +193,7 @@ pub fn probe() void {
                     c.printf(c"Block device...\n");
                     if (false == block.setup_block_device(ptr)) {
                         c.printf(c"Block Setup Failed!\n");
-                    } else {
+                    } else { 
                         var idx = (addr - MMIO_VIRTIO_START) >> 12;
                         VIRTIO_DEVICES[idx] = VirtioDevice.newWith(DeviceTypes.Block);
                         c.printf(c"Block Setup Succeeded!\n");
@@ -244,6 +253,7 @@ pub fn handle_interrupt(interrupt: u32) void {
     var idx = usize(interrupt) - 1;
     var vd = VIRTIO_DEVICES[idx];
 //    if (vd == undefined) {
+    c.printf(c"DEBUG --> BLOCK DEV INTERRUPT TOOK US HERE.\n");
     switch (vd.devtype) {
         DeviceTypes.Block => {
             block.handle_interrupt(idx);
