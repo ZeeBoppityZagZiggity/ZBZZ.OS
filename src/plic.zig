@@ -10,7 +10,7 @@ const claim_reg_addr: usize = 0x0c200004;
 pub fn enable(comptime id: u32) void {
     const ptr = @intToPtr(*volatile u32, enable_reg_addr);
 
-    ptr.* = (1 << id); 
+    ptr.* |= (1 << id); 
 }
 
 /// PLIC set_priority 

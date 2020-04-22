@@ -196,6 +196,7 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
+    //c.printf(c"DEBUG --> num_pages: %d\n",num_pages);
     var queue_ptr = @ptrCast(*virtio.Queue, page.zalloc(num_pages));
     var queue_pfn = @ptrToInt(queue_ptr);
     tmpaddr = @ptrToInt(ptr);
@@ -311,13 +312,11 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
         .next = 0,
     };
     var _status_idx = fill_next_descriptor(bdev, desc);
-    var tmpIdx: u16 = @intCast(u16,(@intCast(usize,(bdev.*.queue).*.avail.idx)) % virtio.VIRTIO_RING_SIZE); 
-    //(bdev.*.queue).*.avail.ring[tmpIdx] = head_idx;
-    c.printf(c"DEBUG --> tmpIdx = %d\n", tmpIdx);
-    (bdev.*.queue).*.avail.ring[0] = head_idx;
-    (bdev.*.queue).*.avail.idx = (tmpIdx+ 1) % u16(virtio.VIRTIO_RING_SIZE);
+    const tmpIdx: u16 = @intCast(u16,(@intCast(usize,(bdev.*.queue).*.avail.idx)) % virtio.VIRTIO_RING_SIZE); 
 
-    //c.printf(c"DEBUG --> tmpIdx = %d\n", (bdev.*.queue).*.avail.idx);
+    var temp: [*]u16 = @ptrCast([*]u16,@alignCast(2, &((bdev.*.queue).*.avail.ring[0])));
+    temp[tmpIdx] = head_idx;
+    (bdev.*.queue).*.avail.idx += 1;
 
     var tmpaddr = @ptrToInt(bdev.*.dev);
     //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);
@@ -345,9 +344,10 @@ pub fn pending(bd: *BlockDevice) void {
     c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
     while (bd.*.ack_used_idx != tmpQueue.*.used.idx) {
         //var elem: virtio.UsedElem = tmpQueue.*.used.ring[@intCast(usize,bd.*.ack_used_idx)];
+        var newTmpQueue: [*]virtio.UsedElem = @ptrCast([*]virtio.UsedElem,@alignCast(@sizeOf(virtio.UsedElem),&(tmpQueue.*.used.ring[0])));
+        var elem = newTmpQueue[bd.*.ack_used_idx % virtio.VIRTIO_RING_SIZE];
+        bd.*.ack_used_idx += 1; 
         c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
-        var elem: virtio.UsedElem = tmpQueue.*.used.ring[0];
-        bd.*.ack_used_idx = (bd.*.ack_used_idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
         kmem.kfree(@intToPtr([*]u8, tmpQueue.*.desc[usize(elem.id)].addr));
     }
 }

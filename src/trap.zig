@@ -59,6 +59,7 @@ export fn m_trap(epc: usize, tval: usize, mcause: usize, hart: usize, status: us
                 c.printf(c"DEBUG--> PLIC INTERRUPT: %d", claim_id);
                 switch (claim_id) {
                     1...8 => {
+                        c.printf(c"DEBUG --> Looking at a pretty virtio interrupt\n");
                         virtio.handle_interrupt(claim_id);
                     },
                     10 => { //UART
