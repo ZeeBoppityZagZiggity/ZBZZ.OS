@@ -157,6 +157,7 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     // 6. Re-read status to ensure FEATURES_OK is still set.
     // Otherwise, it doesn't support our features.
     var status_ok = tmpPtr.*;
+ //   c.printf(c"status_okay: %d\n",status_ok);
     // If the status field no longer has features_ok set,
     // that means that the device couldn't accept
     // the features that we request. Therefore, this is
@@ -227,9 +228,7 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-    tmpPtr.* = @intCast(u32,status_bits);
-
-   
+    tmpPtr.* = @intCast(u32,status_bits);   
 
     return true;
 }
