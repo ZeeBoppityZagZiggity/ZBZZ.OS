@@ -118,7 +118,6 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     //Peep the volatile.
     //Peep the * 4 because 4 byte offset (I believe...)
     var tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
@@ -134,21 +133,18 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     // 4. Read device feature bits, write subset of feature
     // bits understood by OS and driver to the device.
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.HostFeatures));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     var host_features = tmpPtr.*;
     var guest_features = host_features & ~(@intCast(u32,1 << VIRTIO_BLK_F_RO));
     var ro = (host_features & (1 << VIRTIO_BLK_F_RO)) != 0;
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestFeatures));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = guest_features;
 
     // 5. Set the FEATURES_OK status bit
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     status_bits = @enumToInt(virtio.StatusField.FeaturesOk);
@@ -173,13 +169,11 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     // queue size is valid because the device can only take
     // a certain size.
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNumMax) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNumMax));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     var qnmax = tmpPtr.*;
 
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNum) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNum));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = u32(virtio.VIRTIO_RING_SIZE);
@@ -192,7 +186,6 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     var num_pages = (@sizeOf(virtio.Queue) + page.PAGE_SIZE - 1) / page.PAGE_SIZE;
 
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueSel) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueSel));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
@@ -201,13 +194,11 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     var queue_ptr = @ptrCast(*virtio.Queue, page.zalloc(num_pages));
     var queue_pfn = @ptrToInt(queue_ptr);
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.GuestPageSize));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = u32(page.PAGE_SIZE);
 
     tmpaddr = @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueuePfn));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = @intCast(u32,queue_pfn / page.PAGE_SIZE);
@@ -225,7 +216,6 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     // 8. Set the DRIVER_OK status bit. Device is now "live"
     status_bits = @enumToInt(virtio.StatusField.DriverOk);
     tmpaddr |= @ptrToInt(ptr);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = @intCast(u32,status_bits);   
@@ -320,40 +310,19 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
     var temp: [*]u16 = @ptrCast([*]u16,@alignCast(2, &((bdev.*.queue).*.avail.ring[0])));
     temp[2 + tmpIdx] = head_idx;
     temp[1] += 1;
-    // c.printf(c"head_idx = %d\n", head_idx);
-    // (bdev.*.queue).*.avail.idx += 1;
-    // var temp = &(bdev.*.queue.*.avail);
-    // var temp2 = @ptrCast([*]u16, temp);
-    // temp2[tmpIdx] = head_idx; 
-    // temp.*.idx += 1;
 
-    // var a1 = @ptrToInt(temp); 
-    // var a2 = @ptrToInt(&((bdev.*.queue).*.avail));
-    // var sq: usize = @sizeOf(virtio.Queue);
-    // var sa: usize = @sizeOf(virtio.Available);
-    // c.printf(c"a1: %08x\na2: %08x\n", a1, a2);
-    // c.printf(c"Sizeof queue: %d\nSizeof avail: %d\n", sq, sa);
+    //var a1 = @ptrToInt(temp); 
+    //var a2 = @ptrToInt(&((bdev.*.queue).*.avail));
+    //var sq: usize = @sizeOf(virtio.Queue);
+    //var sa: usize = @sizeOf(virtio.Available);
+    //c.printf(c"a1: %08x\na2: %08x\n", a1, a2);
+    //c.printf(c"Sizeof queue: %d\nSizeof avail: %d\n", sq, sa);
 
 
     var tmpaddr = @ptrToInt(bdev.*.dev);
-    //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify));
     var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-    tmpPtr.* = 0;
-
-    // var i: usize = 0;
-    // while(true) {
-    //     while (i < 100000000) {
-    //         i += 1; 
-    //     }
-    //     i = 0;
-    //     stat = blk_request.*.status.status; 
-    // avail_idx = bdev.*.queue.*.avail.idx;
-    // used_idx = bdev.*.queue.*.used.idx;
-    // c.printf(c"request status: %08b\n", stat);
-    // c.printf(c"avail_idx: %04x\nused_idx:  %04x\n", avail_idx, used_idx);
-    // }   
-    
+    tmpPtr.* = 0;    
 
     //}
 }
