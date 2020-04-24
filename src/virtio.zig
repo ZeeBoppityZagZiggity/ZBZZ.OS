@@ -21,7 +21,7 @@ pub const VIRTIO_AVAIL_F_NO_INTERRUPT: u16 = 1;
 
 pub const VIRTIO_USED_F_NO_NOTIFY: u16 = 1;
 
-pub const VIRTIO_RING_SIZE: usize = 1 << 7;
+pub const VIRTIO_RING_SIZE: u16 = 1 << 7;
 
 // VirtIO structures
 
@@ -253,7 +253,7 @@ pub fn handle_interrupt(interrupt: u32) void {
     var idx = usize(interrupt) - 1;
     var vd = VIRTIO_DEVICES[idx];
 //    if (vd == undefined) {
-    c.printf(c"DEBUG --> BLOCK DEV INTERRUPT TOOK US HERE.\n");
+    // c.printf(c"DEBUG --> BLOCK DEV INTERRUPT TOOK US HERE.\n");
     switch (vd.devtype) {
         DeviceTypes.Block => {
             block.handle_interrupt(idx);

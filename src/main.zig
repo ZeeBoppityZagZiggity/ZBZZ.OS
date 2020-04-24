@@ -146,14 +146,11 @@ export fn kinit() void {
     virtio.probe();
 
     c.printf(c"Testing Block Driver ish\n");
-    var buffer = kmem.kmalloc(512);
+    var buffer = kmem.kzmalloc(512);
     block.read(8, buffer, 512, 0);
 
     var i: usize = 0;
-    while (i < 100000000) {
-        i += 1;
-    }
-    i = 0;
+    asm volatile ("wfi");
     while (i < 49) {
         c.printf(c" :%02x", buffer[i]);
         if (((i + 1) % 24)== 0) {

@@ -247,7 +247,6 @@ pub fn fill_next_descriptor(bd: *BlockDevice, desc: virtio.Descriptor) u16 {
        // c.printf(c"Got in here like we should.\n");
         (bd.*.queue).*.desc[usize(bd.*.idx)].next = (bd.*.idx + 1) % u16(virtio.VIRTIO_RING_SIZE);
     }
-
     return bd.*.idx;
 }
 
@@ -293,9 +292,7 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
     blk_request.*.data.data = buffer;
     blk_request.*.header.reserved = 0;
     blk_request.*.status.status = 111;
-
-    var stat = blk_request.*.status.status; 
-    c.printf(c"request status: %08b\n", stat);
+    
 
     var flags = virtio.VIRTIO_DESC_F_NEXT;
     if (writeCheck == false) {
@@ -316,13 +313,27 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
         .next = 0,
     };
     var _status_idx = fill_next_descriptor(bdev, desc);
-    const tmpIdx: u16 = @intCast(u16,(@intCast(usize,(bdev.*.queue).*.avail.idx)) % virtio.VIRTIO_RING_SIZE); 
+    const tmpIdx: u16 = (bdev.*.queue).*.avail.idx; 
+
+    // c.printf(c"avail: %d\n", tmpIdx);
 
     var temp: [*]u16 = @ptrCast([*]u16,@alignCast(2, &((bdev.*.queue).*.avail.ring[0])));
-    temp[tmpIdx] = head_idx;
-    (bdev.*.queue).*.avail.idx += 1;
+    temp[2 + tmpIdx] = head_idx;
+    temp[1] += 1;
+    // c.printf(c"head_idx = %d\n", head_idx);
+    // (bdev.*.queue).*.avail.idx += 1;
+    // var temp = &(bdev.*.queue.*.avail);
+    // var temp2 = @ptrCast([*]u16, temp);
+    // temp2[tmpIdx] = head_idx; 
+    // temp.*.idx += 1;
 
-    
+    // var a1 = @ptrToInt(temp); 
+    // var a2 = @ptrToInt(&((bdev.*.queue).*.avail));
+    // var sq: usize = @sizeOf(virtio.Queue);
+    // var sa: usize = @sizeOf(virtio.Available);
+    // c.printf(c"a1: %08x\na2: %08x\n", a1, a2);
+    // c.printf(c"Sizeof queue: %d\nSizeof avail: %d\n", sq, sa);
+
 
     var tmpaddr = @ptrToInt(bdev.*.dev);
     //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);
@@ -330,17 +341,18 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
     var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
 
-    stat = blk_request.*.status.status; 
-    c.printf(c"request status: %08b\n", stat);
-
-    var i: usize = 0;
-    while(true) {
-        while (i < 100000000) {
-            i += 1; 
-        }
-        stat = blk_request.*.status.status; 
-        c.printf(c"request status: %08b\n", stat);
-    }   
+    // var i: usize = 0;
+    // while(true) {
+    //     while (i < 100000000) {
+    //         i += 1; 
+    //     }
+    //     i = 0;
+    //     stat = blk_request.*.status.status; 
+    // avail_idx = bdev.*.queue.*.avail.idx;
+    // used_idx = bdev.*.queue.*.used.idx;
+    // c.printf(c"request status: %08b\n", stat);
+    // c.printf(c"avail_idx: %04x\nused_idx:  %04x\n", avail_idx, used_idx);
+    // }   
     
 
     //}
@@ -361,13 +373,13 @@ pub fn pending(bd: *BlockDevice) void {
     // Here we need to check the used ring and then free the resources
     // given by the descriptor id.
     var tmpQueue: *virtio.Queue = bd.*.queue;
-    c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
+    // c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
     while (bd.*.ack_used_idx != tmpQueue.*.used.idx) {
         //var elem: virtio.UsedElem = tmpQueue.*.used.ring[@intCast(usize,bd.*.ack_used_idx)];
         var newTmpQueue: [*]virtio.UsedElem = @ptrCast([*]virtio.UsedElem,@alignCast(@sizeOf(virtio.UsedElem),&(tmpQueue.*.used.ring[0])));
         var elem = newTmpQueue[bd.*.ack_used_idx % virtio.VIRTIO_RING_SIZE];
         bd.*.ack_used_idx += 1; 
-        c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
+        // c.printf(c"DEBUG --> bd.*.ack_used_idx: %d",bd.*.ack_used_idx);
         kmem.kfree(@intToPtr([*]u8, tmpQueue.*.desc[usize(elem.id)].addr));
     }
 }
@@ -377,7 +389,7 @@ pub fn pending(bd: *BlockDevice) void {
 pub fn handle_interrupt(idx: usize) void {
     var bdev = BLOCK_DEVICES[idx];
 //    if (bdev != undefined) {
-    c.printf(c"DEBUG --> Handling block dev interrupt.\n");
+    // c.printf(c"DEBUG --> Handling block dev interrupt.\n");
     pending(&bdev);
 //    } else {
 //        c.printf(c"Invalid block device for interrupt %d...\n", idx + 1);
