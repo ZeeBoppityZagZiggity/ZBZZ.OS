@@ -33,10 +33,12 @@ contpoint:
 	la		a0, kinit
 
 	# Setting privilege to level 3 (machine) and enabling interrupts
-	li		t0, 0x1800
+	li		t0, 0x1888
 	csrw 	mstatus, t0
 	csrw	mepc, a0
-	csrw	mie, zero
+	# csrw	mie, zero
+	li 		t2, 0xaaa
+	csrw 	mie, t2
 	la 		t1, m_trap_vector 
 	csrw 	mtvec, t1
 

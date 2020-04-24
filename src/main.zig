@@ -92,6 +92,8 @@ export fn kinit() void {
 
     // Set up the PLIC
     plic.set_threshold(0);
+    plic.enable(10);
+    plic.set_priority(10, 1);
     plic.enable(1);
     plic.set_priority(1, 1);
     plic.enable(2);
@@ -110,13 +112,12 @@ export fn kinit() void {
     plic.set_priority(8, 1);
     plic.enable(9);
     plic.set_priority(9, 1);
-    plic.enable(10);
-    plic.set_priority(10, 1);
+    
     //Create Trap Frame Pointer
-    // const tf = @ptrCast(*const u8, &trap.KERNEL_TRAP_FRAME);
-    // const tf_ptr = @ptrToInt(tf);
-    // //Store it in mscratch
-    // cpu.mscratch_write(tf_ptr);
+    const tf = @ptrCast(*const u8, &trap.KERNEL_TRAP_FRAME);
+    const tf_ptr = @ptrToInt(tf);
+    //Store it in mscratch
+    cpu.mscratch_write(tf_ptr);
 
     // //Testing linked list from here
 
@@ -147,7 +148,12 @@ export fn kinit() void {
     c.printf(c"Testing Block Driver ish\n");
     var buffer = kmem.kmalloc(512);
     block.read(8, buffer, 512, 0);
-    var i: u16 = 0;
+
+    var i: usize = 0;
+    while (i < 100000000) {
+        i += 1;
+    }
+    i = 0;
     while (i < 49) {
         c.printf(c" :%02x", buffer[i]);
         if (((i + 1) % 24)== 0) {
@@ -160,15 +166,17 @@ export fn kinit() void {
 
     kmem.kfree(buffer);
     c.printf(c"Block Driver testing completed, bby. \n");
+    while(true) {
 
-    timer.set_timer_ms(0, 1000);
-    c.printf(c"addr of process list: %08x\n", @ptrToInt(&proc.PROCESS_LIST));
-    // var tmp = @ptrToInt(&proc.PROCESS_LIST);
-    var s = sched.schedule();
-    // c.printf(c"Frame addr: %08x\nMEPC: %08x\nSATP: %08x%08x\n", s.frame, s.mepc, s.satp >> 32, s.satp);
-    // c.printf(c"sp should be: %x, but is %x\n", proc.PROCESS_LIST[0].frame.*.regs[2], frame_ptr.*.regs[2]);
-    // c.printf(c"switching to user\n");
-    switch_to_user(s.frame, s.mepc, s.satp);
+    }
+    // timer.set_timer_ms(0, 1000);
+    // c.printf(c"addr of process list: %08x\n", @ptrToInt(&proc.PROCESS_LIST));
+    // // var tmp = @ptrToInt(&proc.PROCESS_LIST);
+    // var s = sched.schedule();
+    // // c.printf(c"Frame addr: %08x\nMEPC: %08x\nSATP: %08x%08x\n", s.frame, s.mepc, s.satp >> 32, s.satp);
+    // // c.printf(c"sp should be: %x, but is %x\n", proc.PROCESS_LIST[0].frame.*.regs[2], frame_ptr.*.regs[2]);
+    // // c.printf(c"switching to user\n");
+    // switch_to_user(s.frame, s.mepc, s.satp);
 
     // c.printf(c"Oh no!!!!!\n");
     // c.printf(c"Exiting kinit\n");

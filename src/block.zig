@@ -69,7 +69,7 @@ pub const Request = packed struct {
     header: Header,
     data: Data,
     status: Status,
-    head: u16,
+    // head: u16,
 };
 
 // Internal block device structure
@@ -125,11 +125,11 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
 
     //Set ACKNOWLEDGE status bit
     var status_bits = @enumToInt(virtio.StatusField.Acknowledge);
-    tmpPtr.* = @intCast(u32,status_bits);
+    tmpPtr.* |= @intCast(u32,status_bits);
 
     //Set DRIVER status bit
-    status_bits |= @enumToInt(virtio.StatusField.DriverOk);
-    tmpPtr.* = @intCast(u32,status_bits);
+    status_bits = @enumToInt(virtio.StatusField.Driver);
+    tmpPtr.* |= @intCast(u32,status_bits);
 
     // 4. Read device feature bits, write subset of feature
     // bits understood by OS and driver to the device.
@@ -151,8 +151,8 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
-    status_bits |= @enumToInt(virtio.StatusField.FeaturesOk);
-    tmpPtr.* = @intCast(u32,status_bits);
+    status_bits = @enumToInt(virtio.StatusField.FeaturesOk);
+    tmpPtr.* |= @intCast(u32,status_bits);
 
     // 6. Re-read status to ensure FEATURES_OK is still set.
     // Otherwise, it doesn't support our features.
@@ -223,8 +223,8 @@ pub fn setup_block_device(ptr: *volatile u32) bool {
     BLOCK_DEVICES[idx] = bd;
 
     // 8. Set the DRIVER_OK status bit. Device is now "live"
-    status_bits |= @enumToInt(virtio.StatusField.DriverOk);
-    tmpaddr = @ptrToInt(ptr);
+    status_bits = @enumToInt(virtio.StatusField.DriverOk);
+    tmpaddr |= @ptrToInt(ptr);
     //tmpaddr += (@enumToInt(virtio.MmioOffsets.Status) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.Status));
     tmpPtr = @intToPtr(*volatile u32, tmpaddr);
@@ -269,14 +269,8 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
     }
     var sector = offset / 512;
     var blk_request_size: usize = @sizeOf(Request);
-    var blk_request = @ptrCast(*Request, kmem.kmalloc(blk_request_size));
-    var desc = virtio.Descriptor{
-        .addr = @ptrToInt(&(blk_request.*.header)),
-        .len = @sizeOf(Header),
-        .flags = virtio.VIRTIO_DESC_F_NEXT,
-        .next = 0,
-    };
-    var head_idx = fill_next_descriptor(bdev, desc);
+    var blk_request = @ptrCast(*Request, kmem.kzmalloc(blk_request_size));
+    
 
     blk_request.*.header.sector = sector;
     if (writeCheck == true) {
@@ -285,6 +279,14 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
         blk_request.*.header.blktype = VIRTIO_BLK_T_IN;
     }
 
+    var desc = virtio.Descriptor{
+        .addr = @ptrToInt(&(blk_request.*.header)),
+        .len = @sizeOf(Header),
+        .flags = virtio.VIRTIO_DESC_F_NEXT,
+        .next = 0,
+    };
+    var head_idx = fill_next_descriptor(bdev, desc);
+
     // We put 111 in the status. Whenever the device finishes, it will write into
     // status. If we read status and it is 111, we know that it wasn't written to by
     // the device.
@@ -292,8 +294,11 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
     blk_request.*.header.reserved = 0;
     blk_request.*.status.status = 111;
 
+    var stat = blk_request.*.status.status; 
+    c.printf(c"request status: %08b\n", stat);
+
     var flags = virtio.VIRTIO_DESC_F_NEXT;
-    if (writeCheck == true) {
+    if (writeCheck == false) {
         flags |= virtio.VIRTIO_DESC_F_WRITE;
     }
     desc = virtio.Descriptor{
@@ -317,11 +322,27 @@ pub fn block_op(comptime dev: usize, buffer: [*]u8, size: u32, offset: u64, writ
     temp[tmpIdx] = head_idx;
     (bdev.*.queue).*.avail.idx += 1;
 
+    
+
     var tmpaddr = @ptrToInt(bdev.*.dev);
     //tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify) * 4);
     tmpaddr += (@enumToInt(virtio.MmioOffsets.QueueNotify));
     var tmpPtr = @intToPtr(*volatile u32, tmpaddr);
     tmpPtr.* = 0;
+
+    stat = blk_request.*.status.status; 
+    c.printf(c"request status: %08b\n", stat);
+
+    var i: usize = 0;
+    while(true) {
+        while (i < 100000000) {
+            i += 1; 
+        }
+        stat = blk_request.*.status.status; 
+        c.printf(c"request status: %08b\n", stat);
+    }   
+    
+
     //}
 }
 

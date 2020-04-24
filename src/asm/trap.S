@@ -53,7 +53,7 @@ m_trap_vector:
 	# ld 		sp, 520(a5) 
 	# la 		t0, _sp0
 	# ld 		sp, 0(t0)
-	la 	sp, _sp0
+	la 	sp, _sp1
 
 	# Go into zig trap handler
 	call m_trap 
